@@ -1,0 +1,358 @@
+1. Create a Sequence for empid (Auto-Generated UUID):
+sql
+Copy code
+CREATE SEQUENCE empid_seq
+  START WITH 1
+  INCREMENT BY 1
+  NOCACHE;
+2. Create the Employee Table:
+sql
+Copy code
+CREATE TABLE Employee (
+    empid VARCHAR2(36) DEFAULT SYS_GUID() PRIMARY KEY,  -- Auto-generated UUID
+    uid VARCHAR2(36) REFERENCES Users(uid),            -- Foreign key to Users table
+    investid VARCHAR2(36) REFERENCES InvestmentDetails(investid), -- Foreign key to InvestmentDetails table
+    depart_id VARCHAR2(36) REFERENCES Department(depart_id),      -- Foreign key to Department table
+    designation_id VARCHAR2(36) REFERENCES Designation(designation_id), -- Foreign key to Designation table
+    tax_detailsid VARCHAR2(36) REFERENCES AnnualTaxFilingDetails(annualfiling_id), -- Foreign key to AnnualTaxFilingDetails table
+    hra NUMBER(19) NOT NULL,                           -- Not Null for hra
+    total_income NUMBER(19) NOT NULL,                  -- Not Null for total_income
+    bonus NUMBER(19) NOT NULL,                         -- Not Null for bonus
+    base_salary NUMBER(19) NOT NULL,                   -- Not Null for base_salary
+    additional_allowances NUMBER(19),                  -- Not Null for additional_allowances
+    date DATE NOT NULL                                 -- Not Null for date
+);
+3. Insert Values into the Employee Table:
+sql
+Copy code
+INSERT INTO Employee (uid, investid, depart_id, designation_id, tax_detailsid, hra, total_income, bonus, base_salary, additional_allowances, date)
+VALUES (
+    (SELECT uid FROM Users WHERE uid = 'some-uuid-1'),
+    (SELECT investid FROM InvestmentDetails WHERE investid = 'some-uuid-1'),
+    (SELECT depart_id FROM Department WHERE depart_id = 'some-uuid-1'),
+    (SELECT designation_id FROM Designation WHERE designation_id = '1'),
+    (SELECT annualfiling_id FROM AnnualTaxFilingDetails WHERE annualfiling_id = 'some-uuid-1'),
+    20000, 500000, 50000, 300000, 20000, SYSDATE
+);
+
+INSERT INTO Employee (uid, investid, depart_id, designation_id, tax_detailsid, hra, total_income, bonus, base_salary, additional_allowances, date)
+VALUES (
+    (SELECT uid FROM Users WHERE uid = 'some-uuid-2'),
+    (SELECT investid FROM InvestmentDetails WHERE investid = 'some-uuid-2'),
+    (SELECT depart_id FROM Department WHERE depart_id = 'some-uuid-2'),
+    (SELECT designation_id FROM Designation WHERE designation_id = '2'),
+    (SELECT annualfiling_id FROM AnnualTaxFilingDetails WHERE annualfiling_id = 'some-uuid-2'),
+    25000, 600000, 60000, 400000, 25000, SYSDATE
+);
+4. Update a Value in the Employee Table:
+Suppose you want to update the total_income for a specific employee:
+
+sql
+Copy code
+UPDATE Employee
+SET total_income = 550000
+WHERE empid = 'some-uuid-1';
+5. Select Values from the Employee Table:
+Retrieve all employee details:
+
+sql
+Copy code
+SELECT * FROM Employee;
+6. Add a Unique Constraint (if needed):
+If you want to add a unique constraint for a combination of fields, such as uid and designation_id:
+
+sql
+Copy code
+ALTER TABLE Employee
+ADD CONSTRAINT unique_employee_designation UNIQUE (uid, designation_id);
+
+1. Create a Sequence for taxdetails_id (Auto-Generated UUID):
+sql
+Copy code
+CREATE SEQUENCE taxdetails_id_seq
+  START WITH 1
+  INCREMENT BY 1
+  NOCACHE;
+2. Create the TaxDetails Table:
+sql
+Copy code
+CREATE TABLE TaxDetails (
+    taxdetails_id VARCHAR2(36) DEFAULT SYS_GUID() PRIMARY KEY, -- Auto-generated UUID
+    uid VARCHAR2(36) REFERENCES Users(uid),                  -- Foreign key to Users table
+    taxslab_id VARCHAR2(36) REFERENCES TaxSlabs(taxslab_id), -- Foreign key to TaxSlabs table
+    empid VARCHAR2(36) REFERENCES Employee(empid),           -- Foreign key to Employee table
+    total_income NUMBER(19) NOT NULL,                        -- Not Null for total_income
+    taxPaid NUMBER(19, 2) NOT NULL,                          -- Not Null for taxPaid
+    taxdue NUMBER(19, 2) NOT NULL,                           -- Not Null for taxdue
+    financial_year NUMBER(4) CHECK (financial_year BETWEEN 1900 AND EXTRACT(YEAR FROM SYSDATE)) NOT NULL, -- Not Null for financial_year
+    gross_salary NUMBER(19) NOT NULL,                        -- Not Null for gross_salary
+    net_salary NUMBER(19) NOT NULL,                          -- Not Null for net_salary
+    hra_exemption NUMBER(19) NOT NULL,                       -- Not Null for hra_exemption
+    standard_deduction NUMBER(19) NOT NULL,                  -- Not Null for standard_deduction
+    rebate_section_87a CHAR(1) CHECK (rebate_section_87a IN ('y', 'n')) NOT NULL, -- Not Null for rebate_section_87a
+    final_tax_liability NUMBER(19) NOT NULL,                 -- Not Null for final_tax_liability
+    date DATE NOT NULL                                       -- Not Null for date
+);
+3. Insert Values into the TaxDetails Table:
+sql
+Copy code
+INSERT INTO TaxDetails (taxdetails_id, uid, taxslab_id, empid, total_income, taxPaid, taxdue, financial_year, gross_salary, net_salary, hra_exemption, standard_deduction, rebate_section_87a, final_tax_liability, date) 
+VALUES (
+    (SELECT taxdetails_id_seq.NEXTVAL FROM DUAL), 
+    (SELECT uid FROM Users WHERE uid = 'some-uuid-1'),
+    (SELECT taxslab_id FROM TaxSlabs WHERE taxslab_id = 'some-uuid-1'),
+    (SELECT empid FROM Employee WHERE empid = 'some-uuid-1'),
+    500000, 50000.00, 20000.00, 2023, 300000, 280000, 15000, 50000, 'y', 35000, SYSDATE
+);
+
+INSERT INTO TaxDetails (taxdetails_id, uid, taxslab_id, empid, total_income, taxPaid, taxdue, financial_year, gross_salary, net_salary, hra_exemption, standard_deduction, rebate_section_87a, final_tax_liability, date) 
+VALUES (
+    (SELECT taxdetails_id_seq.NEXTVAL FROM DUAL),
+    (SELECT uid FROM Users WHERE uid = 'some-uuid-2'),
+    (SELECT taxslab_id FROM TaxSlabs WHERE taxslab_id = 'some-uuid-2'),
+    (SELECT empid FROM Employee WHERE empid = 'some-uuid-2'),
+    600000, 60000.00, 30000.00, 2023, 350000, 320000, 20000, 60000, 'n', 40000, SYSDATE
+);
+4. Update a Value in the TaxDetails Table:
+Suppose you want to update the final_tax_liability for a specific taxdetails_id:
+
+sql
+Copy code
+UPDATE TaxDetails
+SET final_tax_liability = 38000
+WHERE taxdetails_id = 'some-uuid-1';
+5. Select Values from the TaxDetails Table:
+Retrieve all tax details:
+
+sql
+Copy code
+SELECT * FROM TaxDetails;
+6. Add a Unique Constraint (if needed):
+If you want to add a unique constraint for a combination of fields, such as uid and financial_year:
+
+sql
+Copy code
+ALTER TABLE TaxDetails
+ADD CONSTRAINT unique_user_financial_year UNIQUE (uid, financial_year);
+
+1. Create the AuditStatus Table:
+sql
+Copy code
+CREATE TABLE AuditStatus (
+    audit_status_id VARCHAR2(36) DEFAULT SYS_GUID() PRIMARY KEY,  -- Auto-generated UUID
+    audit_status_name VARCHAR2(100) UNIQUE NOT NULL                -- Unique and Not Null for audit_status_name
+);
+2. Create the TaxfileStatus Table:
+sql
+Copy code
+CREATE TABLE TaxfileStatus (
+    taxfile_status_id VARCHAR2(36) DEFAULT SYS_GUID() PRIMARY KEY,  -- Auto-generated UUID
+    taxfile_status_name VARCHAR2(100) UNIQUE NOT NULL                -- Unique and Not Null for taxfile_status_name
+);
+3. Insert Values into the AuditStatus Table:
+sql
+Copy code
+INSERT INTO AuditStatus (audit_status_id, audit_status_name) 
+VALUES ('1', 'Pending');
+
+INSERT INTO AuditStatus (audit_status_id, audit_status_name) 
+VALUES ('2', 'Approved');
+
+INSERT INTO AuditStatus (audit_status_id, audit_status_name) 
+VALUES ('3', 'Rejected');
+4. Insert Values into the TaxfileStatus Table:
+sql
+Copy code
+INSERT INTO TaxfileStatus (taxfile_status_id, taxfile_status_name) 
+VALUES ('1', 'Submitted');
+
+INSERT INTO TaxfileStatus (taxfile_status_id, taxfile_status_name) 
+VALUES ('2', 'Processed');
+
+INSERT INTO TaxfileStatus (taxfile_status_id, taxfile_status_name) 
+VALUES ('3', 'Failed');
+5. Update a Value in the AuditStatus Table:
+Suppose you want to update the audit_status_name for a specific audit_status_id:
+
+sql
+Copy code
+UPDATE AuditStatus
+SET audit_status_name = 'In Review'
+WHERE audit_status_id = '1';
+6. Update a Value in the TaxfileStatus Table:
+Suppose you want to update the taxfile_status_name for a specific taxfile_status_id:
+
+sql
+Copy code
+UPDATE TaxfileStatus
+SET taxfile_status_name = 'Archived'
+WHERE taxfile_status_id = '3';
+7. Select Values from the AuditStatus Table:
+Retrieve all audit statuses:
+
+sql
+Copy code
+SELECT * FROM AuditStatus;
+8. Select Values from the TaxfileStatus Table:
+Retrieve all tax file statuses:
+
+sql
+Copy code
+SELECT * FROM TaxfileStatus;
+9. Add a Unique Constraint (if needed):
+If you need to ensure that audit_status_name and taxfile_status_name are unique across the tables:
+
+sql
+Copy code
+-- Already included in the table creation via UNIQUE constraint
+-- If necessary, you can add it like this:
+
+ALTER TABLE AuditStatus
+ADD CONSTRAINT unique_audit_status_name UNIQUE (audit_status_name);
+
+ALTER TABLE TaxfileStatus
+ADD CONSTRAINT unique_taxfile_status_name UNIQUE (taxfile_status_name);
+
+
+1. Create the AuditLogs Table:
+sql
+Copy code
+CREATE TABLE AuditLogs (
+    audit_id VARCHAR2(36) DEFAULT SYS_GUID() PRIMARY KEY,  -- Auto-generated UUID
+    uid VARCHAR2(36) REFERENCES Users(uid),                -- Foreign key to Users table
+    emp_id VARCHAR2(36) REFERENCES Employee(empid),        -- Foreign key to Employee table
+    tax_details_id VARCHAR2(36) REFERENCES TaxDetails(taxdetails_id), -- Foreign key to TaxDetails table
+    audit_status_id VARCHAR2(36) REFERENCES AuditStatus(audit_status_id), -- Foreign key to AuditStatus table
+    comment VARCHAR2(1000),                                -- Not Null for comment
+    audit_date DATE NOT NULL                              -- Not Null for audit_date
+);
+2. Create the TaxSlab Table:
+sql
+Copy code
+CREATE TABLE TaxSlab (
+    tax_slab_id VARCHAR2(36) DEFAULT SYS_GUID() PRIMARY KEY, -- Auto-generated UUID
+    regime_type VARCHAR2(50) NOT NULL,                       -- Not Null for regime_type
+    min_range NUMBER(19) NOT NULL,                           -- Not Null for min_range
+    max_range NUMBER(19) NOT NULL,                           -- Not Null for max_range
+    tax_rate NUMBER(5, 2) NOT NULL,                          -- Not Null for tax_rate
+    standard_deduction NUMBER(19) NOT NULL,                  -- Not Null for standard_deduction
+    rebate_limit NUMBER(19),                                -- Nullable
+    rebate_amt NUMBER(19)                                   -- Nullable
+);
+3. Create the TaxReturn Table:
+sql
+Copy code
+CREATE TABLE TaxReturn (
+    taxreturn_id VARCHAR2(36) DEFAULT SYS_GUID() PRIMARY KEY, -- Auto-generated UUID
+    empid VARCHAR2(36) REFERENCES Employee(empid),          -- Foreign key to Employee table
+    uid VARCHAR2(36) REFERENCES Users(uid),                -- Foreign key to Users table
+    tax_details_id VARCHAR2(36) REFERENCES TaxDetails(taxdetails_id), -- Foreign key to TaxDetails table
+    taxfile_status_id VARCHAR2(36) REFERENCES TaxfileStatus(taxfile_status_id), -- Foreign key to TaxfileStatus table
+    return_amt NUMBER(19) NOT NULL,                        -- Not Null for return_amt
+    return_date DATE NOT NULL,                              -- Not Null for return_date
+    return_description VARCHAR2(1000),                     -- Nullable
+    submission_date DATE NOT NULL                           -- Not Null for submission_date
+);
+4. Create the TaxClaim Table:
+sql
+Copy code
+CREATE TABLE TaxClaim (
+    taxclaim_id VARCHAR2(36) DEFAULT SYS_GUID() PRIMARY KEY, -- Auto-generated UUID
+    empid VARCHAR2(36) REFERENCES Employee(empid),          -- Foreign key to Employee table
+    uid VARCHAR2(36) REFERENCES Users(uid),                -- Foreign key to Users table
+    tax_details_id VARCHAR2(36) REFERENCES TaxDetails(taxdetails_id), -- Foreign key to TaxDetails table
+    taxfile_status_id VARCHAR2(36) REFERENCES TaxfileStatus(taxfile_status_id), -- Foreign key to TaxfileStatus table
+    claim_amt NUMBER(19) NOT NULL,                          -- Not Null for claim_amt
+    claim_date DATE NOT NULL,                               -- Not Null for claim_date
+    claim_description VARCHAR2(1000),                      -- Nullable
+    submission_date DATE NOT NULL                           -- Not Null for submission_date
+);
+5. Insert Values into the AuditLogs Table:
+sql
+Copy code
+INSERT INTO AuditLogs (audit_id, uid, emp_id, tax_details_id, audit_status_id, comment, audit_date)
+VALUES (
+    '1', 
+    (SELECT uid FROM Users WHERE uid = 'some-uuid-1'),
+    (SELECT empid FROM Employee WHERE empid = 'some-uuid-1'),
+    (SELECT taxdetails_id FROM TaxDetails WHERE taxdetails_id = 'some-uuid-1'),
+    (SELECT audit_status_id FROM AuditStatus WHERE audit_status_id = '1'),
+    'Initial audit performed',
+    SYSDATE
+);
+6. Insert Values into the TaxSlab Table:
+sql
+Copy code
+INSERT INTO TaxSlab (tax_slab_id, regime_type, min_range, max_range, tax_rate, standard_deduction, rebate_limit, rebate_amt)
+VALUES (
+    '1', 'Old Regime', 0, 250000, 5.00, 50000, 20000, 5000
+);
+
+INSERT INTO TaxSlab (tax_slab_id, regime_type, min_range, max_range, tax_rate, standard_deduction, rebate_limit, rebate_amt)
+VALUES (
+    '2', 'New Regime', 0, 300000, 10.00, 30000, 15000, 3000
+);
+7. Insert Values into the TaxReturn Table:
+sql
+Copy code
+INSERT INTO TaxReturn (taxreturn_id, empid, uid, tax_details_id, taxfile_status_id, return_amt, return_date, return_description, submission_date)
+VALUES (
+    '1', 
+    (SELECT empid FROM Employee WHERE empid = 'some-uuid-1'),
+    (SELECT uid FROM Users WHERE uid = 'some-uuid-1'),
+    (SELECT taxdetails_id FROM TaxDetails WHERE taxdetails_id = 'some-uuid-1'),
+    (SELECT taxfile_status_id FROM TaxfileStatus WHERE taxfile_status_id = '1'),
+    5000, SYSDATE, 'Tax return for the financial year 2023', SYSDATE
+);
+8. Insert Values into the TaxClaim Table:
+sql
+Copy code
+INSERT INTO TaxClaim (taxclaim_id, empid, uid, tax_details_id, taxfile_status_id, claim_amt, claim_date, claim_description, submission_date)
+VALUES (
+    '1', 
+    (SELECT empid FROM Employee WHERE empid = 'some-uuid-1'),
+    (SELECT uid FROM Users WHERE uid = 'some-uuid-1'),
+    (SELECT taxdetails_id FROM TaxDetails WHERE taxdetails_id = 'some-uuid-1'),
+    (SELECT taxfile_status_id FROM TaxfileStatus WHERE taxfile_status_id = '1'),
+    10000, SYSDATE, 'Claim for medical expenses', SYSDATE
+);
+9. Update a Value in the AuditLogs Table:
+sql
+Copy code
+UPDATE AuditLogs
+SET comment = 'Audit reviewed and updated'
+WHERE audit_id = '1';
+10. Update a Value in the TaxSlab Table:
+sql
+Copy code
+UPDATE TaxSlab
+SET tax_rate = 6.00
+WHERE tax_slab_id = '1';
+11. Update a Value in the TaxReturn Table:
+sql
+Copy code
+UPDATE TaxReturn
+SET return_amt = 6000
+WHERE taxreturn_id = '1';
+12. Update a Value in the TaxClaim Table:
+sql
+Copy code
+UPDATE TaxClaim
+SET claim_amt = 12000
+WHERE taxclaim_id = '1';
+13. Select Values from the AuditLogs Table:
+sql
+Copy code
+SELECT * FROM AuditLogs;
+14. Select Values from the TaxSlab Table:
+sql
+Copy code
+SELECT * FROM TaxSlab;
+15. Select Values from the TaxReturn Table:
+sql
+Copy code
+SELECT * FROM TaxReturn;
+16. Select Values from the TaxClaim Table:
+sql
+Copy code
+SELECT * FROM TaxClaim;
