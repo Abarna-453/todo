@@ -1,0 +1,1720 @@
+1. Roles Entity
+RolesEntity.java
+java
+Copy code
+package com.taxmanagement.dao.entity;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "roles")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class RolesEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "role_id")
+    private int roleId;
+
+    @Column(name = "role_name")
+    private String roleName;
+}
+RolesPojo.java
+java
+Copy code
+package com.taxmanagement.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class RolesPojo {
+    private int roleId;
+    private String roleName;
+}
+RolesDao.java
+java
+Copy code
+package com.taxmanagement.dao;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.taxmanagement.dao.entity.RolesEntity;
+
+@Repository
+public interface RolesDao extends JpaRepository<RolesEntity, Integer> {}
+RolesService.java
+java
+Copy code
+package com.taxmanagement.service;
+
+import java.util.List;
+import com.taxmanagement.pojo.RolesPojo;
+
+public interface RolesService {
+    List<RolesPojo> fetchAllRoles();
+    RolesPojo fetchARole(int roleId);
+    RolesPojo addRole(RolesPojo rolePojo);
+    RolesPojo updateRole(RolesPojo rolePojo);
+    void deleteRole(int roleId);
+}
+RolesServiceImpl.java
+java
+Copy code
+package com.taxmanagement.service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.taxmanagement.dao.RolesDao;
+import com.taxmanagement.dao.entity.RolesEntity;
+import com.taxmanagement.pojo.RolesPojo;
+
+@Service
+public class RolesServiceImpl implements RolesService {
+    
+    @Autowired
+    private RolesDao rolesDao;
+
+    @Override
+    public List<RolesPojo> fetchAllRoles() {
+        List<RolesEntity> rolesEntities = rolesDao.findAll();
+        List<RolesPojo> rolesPojos = new ArrayList<>();
+        for (RolesEntity entity : rolesEntities) {
+            RolesPojo pojo = new RolesPojo();
+            BeanUtils.copyProperties(entity, pojo);
+            rolesPojos.add(pojo);
+        }
+        return rolesPojos;
+    }
+
+    @Override
+    public RolesPojo fetchARole(int roleId) {
+        RolesEntity entity = rolesDao.findById(roleId).orElse(null);
+        if (entity != null) {
+            RolesPojo pojo = new RolesPojo();
+            BeanUtils.copyProperties(entity, pojo);
+            return pojo;
+        }
+        return null;
+    }
+
+    @Override
+    public RolesPojo addRole(RolesPojo rolePojo) {
+        RolesEntity entity = new RolesEntity();
+        BeanUtils.copyProperties(rolePojo, entity);
+        rolesDao.save(entity);
+        rolePojo.setRoleId(entity.getRoleId());
+        return rolePojo;
+    }
+
+    @Override
+    public RolesPojo updateRole(RolesPojo rolePojo) {
+        RolesEntity entity = new RolesEntity();
+        BeanUtils.copyProperties(rolePojo, entity);
+        rolesDao.save(entity);
+        return rolePojo;
+    }
+
+    @Override
+    public void deleteRole(int roleId) {
+        rolesDao.deleteById(roleId);
+    }
+}
+RolesController.java
+java
+Copy code
+package com.taxmanagement.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.taxmanagement.pojo.RolesPojo;
+import com.taxmanagement.service.RolesService;
+
+@RestController
+@RequestMapping("/api/roles")
+public class RolesController {
+    
+    @Autowired
+    private RolesService rolesService;
+
+    @GetMapping
+    public ResponseEntity<List<RolesPojo>> fetchAllRoles() {
+        List<RolesPojo> allRoles = rolesService.fetchAllRoles();
+        return new ResponseEntity<>(allRoles, HttpStatus.OK);
+    }
+
+    @GetMapping("/{roleId}")
+    public ResponseEntity<RolesPojo> fetchRole(@PathVariable("roleId") int roleId) {
+        RolesPojo role = rolesService.fetchARole(roleId);
+        return new ResponseEntity<>(role, HttpStatus.OK);
+    }
+
+    @PostMapping
+    public ResponseEntity<RolesPojo> addRole(@RequestBody RolesPojo newRole) {
+        RolesPojo addedRole = rolesService.addRole(newRole);
+        return new ResponseEntity<>(addedRole, HttpStatus.CREATED);
+    }
+
+    @PutMapping
+    public ResponseEntity<RolesPojo> updateRole(@RequestBody RolesPojo updateRole) {
+        RolesPojo updatedRole = rolesService.updateRole(updateRole);
+        return new ResponseEntity<>(updatedRole, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{roleId}")
+    public ResponseEntity<Void> deleteRole(@PathVariable("roleId") int roleId) {
+        rolesService.deleteRole(roleId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+}
+2. Credentials Entity
+CredentialsEntity.java
+java
+Copy code
+package com.taxmanagement.dao.entity;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "credentials")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class CredentialsEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "uid")
+    private int uid;
+
+    @ManyToOne
+    @JoinColumn(name = "role_id")
+    private RolesEntity role;
+
+    @Column(name = "email")
+    private String email;
+
+    @Column(name = "password")
+    private String password;
+}
+CredentialsPojo.java
+java
+Copy code
+package com.taxmanagement.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class CredentialsPojo {
+    private int uid;
+    private String email;
+    private String password;
+    private RolesPojo rolePojo;
+}
+CredentialsDao.java
+java
+Copy code
+package com.taxmanagement.dao;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.taxmanagement.dao.entity.CredentialsEntity;
+
+@Repository
+public interface CredentialsDao extends JpaRepository<CredentialsEntity, Integer> {}
+CredentialsService.java
+java
+Copy code
+package com.taxmanagement.service;
+
+import java.util.List;
+
+import com.taxmanagement.pojo.CredentialsPojo;
+
+public interface CredentialsService {
+    List<CredentialsPojo> fetchAllCredentials();
+    CredentialsPojo fetchACredential(int uid);
+    CredentialsPojo addCredential(CredentialsPojo credentialsPojo);
+    CredentialsPojo updateCredential(CredentialsPojo credentialsPojo);
+    void deleteCredential(int uid);
+}
+CredentialsServiceImpl.java
+java
+Copy code
+package com.taxmanagement.service;
+
+import java.util.ArrayList;
+import java.util.List;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.taxmanagement.dao.CredentialsDao;
+import com.taxmanagement.dao.entity.CredentialsEntity;
+import com.taxmanagement.pojo.CredentialsPojo;
+
+@Service
+public class CredentialsServiceImpl implements CredentialsService {
+    
+    @Autowired
+    private CredentialsDao credentialsDao;
+
+    @Override
+    public List<CredentialsPojo> fetchAllCredentials() {
+        List<CredentialsEntity> credentialsEntities = credentialsDao.findAll();
+        List<CredentialsPojo> credentialsPojos = new ArrayList<>();
+        for (CredentialsEntity entity : credentialsEntities) {
+            CredentialsPojo pojo = new CredentialsPojo();
+            BeanUtils.copyProperties(entity, pojo);
+            credentialsPojos.add(pojo);
+        }
+        return credentialsPojos;
+    }
+
+    @Override
+    public CredentialsPojo fetchACredential(int uid) {
+        CredentialsEntity entity = credentialsDao.findById(uid).orElse(null);
+        if (entity != null) {
+            CredentialsPojo pojo = new CredentialsPojo();
+            BeanUtils.copyProperties(entity, pojo);
+            return pojo;
+        }
+        return null;
+    }
+
+    @Override
+    public CredentialsPojo addCredential(CredentialsPojo credentialsPojo) {
+        CredentialsEntity entity = new CredentialsEntity();
+        BeanUtils.copyProperties(credentialsPojo, entity);
+        credentialsDao.save(entity);
+        credentialsPojo.setUid(entity.getUid());
+        return credentialsPojo;
+    }
+
+    @Override
+    public CredentialsPojo updateCredential(CredentialsPojo credentialsPojo) {
+        CredentialsEntity entity = new CredentialsEntity();
+        BeanUtils.copyProperties(credentialsPojo, entity);
+        credentialsDao.save(entity);
+        return credentialsPojo;
+    }
+
+    @Override
+    public void deleteCredential(int uid) {
+        credentialsDao.deleteById(uid);
+    }
+}
+CredentialsController.java
+java
+Copy code
+package com.taxmanagement.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.taxmanagement.pojo.CredentialsPojo;
+import com.taxmanagement.service.CredentialsService;
+
+@RestController
+@RequestMapping("/api/credentials")
+public class CredentialsController {
+    
+    @Autowired
+    private CredentialsService credentialsService;
+
+    @GetMapping
+    public ResponseEntity<List<CredentialsPojo>> fetchAllCredentials() {
+        List<CredentialsPojo> allCredentials = credentialsService.fetchAllCredentials();
+        return new ResponseEntity<>(allCredentials, HttpStatus.OK);
+    }
+
+    @GetMapping("/{uid}")
+    public ResponseEntity<CredentialsPojo> fetchCredential(@PathVariable("uid") int uid) {
+        CredentialsPojo credential = credentialsService.fetchACredential(uid);
+        return new ResponseEntity<>(credential, HttpStatus.OK);
+    }
+
+    @PostMapping
+    public ResponseEntity<CredentialsPojo> addCredential(@RequestBody CredentialsPojo newCredential) {
+        CredentialsPojo addedCredential = credentialsService.addCredential(newCredential);
+        return new ResponseEntity<>(addedCredential, HttpStatus.CREATED);
+    }
+
+    @PutMapping
+    public ResponseEntity<CredentialsPojo> updateCredential(@RequestBody CredentialsPojo updateCredential) {
+        CredentialsPojo updatedCredential = credentialsService.updateCredential(updateCredential);
+        return new ResponseEntity<>(updatedCredential, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{uid}")
+    public ResponseEntity<Void> deleteCredential(@PathVariable("uid") int uid) {
+        credentialsService.deleteCredential(uid);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+}
+You can replicate similar structures for other entities like AnnualTaxFilingDetails, InvestmentDetails, Employee, and TaxDetails. These would include:
+
+Entities: Representing the database tables with appropriate mappings.
+DAOs (Repositories): Extending JpaRepository for easy CRUD operations.
+Service Layer: With interfaces and implementations for business logic.
+Controller Layer: For handling HTTP requests.
+Would you like to see the code for any other specific entity or a detailed explanation on specific sections?
+
+
+
+
+
+
+You said:
+yes
+ChatGPT said:
+ChatGPT
+Sure! I will provide the code for one of the other entities, say AnnualTaxFilingDetails, and its related components such as the Entity, DAO, Service, and Controller. You can use the same pattern for the other tables like InvestmentDetails, Employee, and TaxDetails.
+
+3. AnnualTaxFilingDetails Entity
+AnnualTaxFilingDetailsEntity.java
+java
+Copy code
+package com.taxmanagement.dao.entity;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.Date;
+
+@Entity
+@Table(name = "annual_tax_filing_details")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class AnnualTaxFilingDetailsEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "tax_details_id")
+    private int taxDetailsId;
+
+    @ManyToOne
+    @JoinColumn(name = "uid")
+    private CredentialsEntity user;
+
+    @Column(name = "total_income")
+    private double totalIncome;
+
+    @Column(name = "tax_paid")
+    private double taxPaid;
+
+    @Column(name = "tax_due")
+    private double taxDue;
+
+    @Column(name = "financial_year")
+    private String financialYear;
+
+    @Column(name = "date_filed")
+    private Date dateFiled;
+}
+AnnualTaxFilingDetailsPojo.java
+java
+Copy code
+package com.taxmanagement.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.Date;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class AnnualTaxFilingDetailsPojo {
+    private int taxDetailsId;
+    private CredentialsPojo userPojo;
+    private double totalIncome;
+    private double taxPaid;
+    private double taxDue;
+    private String financialYear;
+    private Date dateFiled;
+}
+AnnualTaxFilingDetailsDao.java
+java
+Copy code
+package com.taxmanagement.dao;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.taxmanagement.dao.entity.AnnualTaxFilingDetailsEntity;
+
+@Repository
+public interface AnnualTaxFilingDetailsDao extends JpaRepository<AnnualTaxFilingDetailsEntity, Integer> {}
+AnnualTaxFilingDetailsService.java
+java
+Copy code
+package com.taxmanagement.service;
+
+import java.util.List;
+
+import com.taxmanagement.pojo.AnnualTaxFilingDetailsPojo;
+
+public interface AnnualTaxFilingDetailsService {
+    List<AnnualTaxFilingDetailsPojo> fetchAllTaxFilingDetails();
+    AnnualTaxFilingDetailsPojo fetchTaxFilingDetail(int taxDetailsId);
+    AnnualTaxFilingDetailsPojo addTaxFilingDetail(AnnualTaxFilingDetailsPojo taxFilingPojo);
+    AnnualTaxFilingDetailsPojo updateTaxFilingDetail(AnnualTaxFilingDetailsPojo taxFilingPojo);
+    void deleteTaxFilingDetail(int taxDetailsId);
+}
+AnnualTaxFilingDetailsServiceImpl.java
+java
+Copy code
+package com.taxmanagement.service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.taxmanagement.dao.AnnualTaxFilingDetailsDao;
+import com.taxmanagement.dao.entity.AnnualTaxFilingDetailsEntity;
+import com.taxmanagement.pojo.AnnualTaxFilingDetailsPojo;
+
+@Service
+public class AnnualTaxFilingDetailsServiceImpl implements AnnualTaxFilingDetailsService {
+    
+    @Autowired
+    private AnnualTaxFilingDetailsDao taxFilingDetailsDao;
+
+    @Override
+    public List<AnnualTaxFilingDetailsPojo> fetchAllTaxFilingDetails() {
+        List<AnnualTaxFilingDetailsEntity> taxFilingEntities = taxFilingDetailsDao.findAll();
+        List<AnnualTaxFilingDetailsPojo> taxFilingPojos = new ArrayList<>();
+        for (AnnualTaxFilingDetailsEntity entity : taxFilingEntities) {
+            AnnualTaxFilingDetailsPojo pojo = new AnnualTaxFilingDetailsPojo();
+            BeanUtils.copyProperties(entity, pojo);
+            taxFilingPojos.add(pojo);
+        }
+        return taxFilingPojos;
+    }
+
+    @Override
+    public AnnualTaxFilingDetailsPojo fetchTaxFilingDetail(int taxDetailsId) {
+        AnnualTaxFilingDetailsEntity entity = taxFilingDetailsDao.findById(taxDetailsId).orElse(null);
+        if (entity != null) {
+            AnnualTaxFilingDetailsPojo pojo = new AnnualTaxFilingDetailsPojo();
+            BeanUtils.copyProperties(entity, pojo);
+            return pojo;
+        }
+        return null;
+    }
+
+    @Override
+    public AnnualTaxFilingDetailsPojo addTaxFilingDetail(AnnualTaxFilingDetailsPojo taxFilingPojo) {
+        AnnualTaxFilingDetailsEntity entity = new AnnualTaxFilingDetailsEntity();
+        BeanUtils.copyProperties(taxFilingPojo, entity);
+        taxFilingDetailsDao.save(entity);
+        taxFilingPojo.setTaxDetailsId(entity.getTaxDetailsId());
+        return taxFilingPojo;
+    }
+
+    @Override
+    public AnnualTaxFilingDetailsPojo updateTaxFilingDetail(AnnualTaxFilingDetailsPojo taxFilingPojo) {
+        AnnualTaxFilingDetailsEntity entity = new AnnualTaxFilingDetailsEntity();
+        BeanUtils.copyProperties(taxFilingPojo, entity);
+        taxFilingDetailsDao.save(entity);
+        return taxFilingPojo;
+    }
+
+    @Override
+    public void deleteTaxFilingDetail(int taxDetailsId) {
+        taxFilingDetailsDao.deleteById(taxDetailsId);
+    }
+}
+AnnualTaxFilingDetailsController.java
+java
+Copy code
+package com.taxmanagement.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.taxmanagement.pojo.AnnualTaxFilingDetailsPojo;
+import com.taxmanagement.service.AnnualTaxFilingDetailsService;
+
+@RestController
+@RequestMapping("/api/tax-filing")
+public class AnnualTaxFilingDetailsController {
+    
+    @Autowired
+    private AnnualTaxFilingDetailsService taxFilingDetailsService;
+
+    @GetMapping
+    public ResponseEntity<List<AnnualTaxFilingDetailsPojo>> fetchAllTaxFilingDetails() {
+        List<AnnualTaxFilingDetailsPojo> allTaxDetails = taxFilingDetailsService.fetchAllTaxFilingDetails();
+        return new ResponseEntity<>(allTaxDetails, HttpStatus.OK);
+    }
+
+    @GetMapping("/{taxDetailsId}")
+    public ResponseEntity<AnnualTaxFilingDetailsPojo> fetchTaxFilingDetail(@PathVariable("taxDetailsId") int taxDetailsId) {
+        AnnualTaxFilingDetailsPojo taxFilingDetail = taxFilingDetailsService.fetchTaxFilingDetail(taxDetailsId);
+        return new ResponseEntity<>(taxFilingDetail, HttpStatus.OK);
+    }
+
+    @PostMapping
+    public ResponseEntity<AnnualTaxFilingDetailsPojo> addTaxFilingDetail(@RequestBody AnnualTaxFilingDetailsPojo newTaxFilingDetail) {
+        AnnualTaxFilingDetailsPojo addedTaxFilingDetail = taxFilingDetailsService.addTaxFilingDetail(newTaxFilingDetail);
+        return new ResponseEntity<>(addedTaxFilingDetail, HttpStatus.CREATED);
+    }
+
+    @PutMapping
+    public ResponseEntity<AnnualTaxFilingDetailsPojo> updateTaxFilingDetail(@RequestBody AnnualTaxFilingDetailsPojo updateTaxFilingDetail) {
+        AnnualTaxFilingDetailsPojo updatedTaxFilingDetail = taxFilingDetailsService.updateTaxFilingDetail(updateTaxFilingDetail);
+        return new ResponseEntity<>(updatedTaxFilingDetail, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{taxDetailsId}")
+    public ResponseEntity<Void> deleteTaxFilingDetail(@PathVariable("taxDetailsId") int taxDetailsId) {
+        taxFilingDetailsService.deleteTaxFilingDetail(taxDetailsId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+}
+Steps for Other Entities
+InvestmentDetails, Employee, and TaxDetails follow a similar structure:
+Create the corresponding entity, POJO, DAO, Service, and Controller.
+Define the relationships between entities like @ManyToOne, @OneToMany, @JoinColumn, etc., based on the database schema.
+For each entity, use JpaRepository for basic CRUD operations.
+Would you like help with a specific part of the other entities, such as relationships or service methods?
+
+
+
+
+
+
+You said:
+do it for InvestmentDetails, Employee,User , TaxClaim , TaxReturn , AuditStatus , TaxFile status , AuditLogs , TaxSlab and TaxDetails too
+ChatGPT said:
+ChatGPT
+Memory updated
+Here is the Spring-based code for the mentioned entities:
+
+1. InvestmentDetails Entity
+java
+Copy code
+@Entity
+@Table(name = "investment_details")
+public class InvestmentDetails {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long investId;
+
+    @ManyToOne
+    @JoinColumn(name = "empid", nullable = false)
+    private Employee employee;
+
+    @Column(name = "investment_type")
+    private String investmentType;
+
+    @Column(name = "investment_amount")
+    private Double investmentAmount;
+
+    @Temporal(TemporalType.DATE)
+    private Date date;
+
+    // Getters and Setters
+}
+2. Employee Entity
+java
+Copy code
+@Entity
+@Table(name = "employee")
+public class Employee {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long empId;
+
+    @ManyToOne
+    @JoinColumn(name = "uid", nullable = false)
+    private User user;
+
+    @OneToOne
+    @JoinColumn(name = "investid")
+    private InvestmentDetails investmentDetails;
+
+    @Column(name = "department_id")
+    private Long departmentId;
+
+    @Column(name = "designation_id")
+    private Long designationId;
+
+    @Column(name = "hra")
+    private Double hra;
+
+    @Column(name = "total_income")
+    private Double totalIncome;
+
+    @Column(name = "bonus")
+    private Double bonus;
+
+    @Column(name = "base_salary")
+    private Double baseSalary;
+
+    @Column(name = "additional_allowances")
+    private Double additionalAllowances;
+
+    @Temporal(TemporalType.DATE)
+    private Date date;
+
+    // Getters and Setters
+}
+3. User Entity
+java
+Copy code
+@Entity
+@Table(name = "users")
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long uid;
+
+    @Column(name = "username", nullable = false)
+    private String username;
+
+    @Column(name = "password", nullable = false)
+    private String password;
+
+    @Column(name = "email")
+    private String email;
+
+    @Column(name = "role")
+    private String role;
+
+    // Getters and Setters
+}
+4. TaxClaim Entity
+java
+Copy code
+@Entity
+@Table(name = "tax_claim")
+public class TaxClaim {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long claimId;
+
+    @ManyToOne
+    @JoinColumn(name = "uid", nullable = false)
+    private User user;
+
+    @Column(name = "claim_amount")
+    private Double claimAmount;
+
+    @Column(name = "claim_status")
+    private String claimStatus; // Pending, Approved, Rejected
+
+    @Temporal(TemporalType.DATE)
+    private Date claimDate;
+
+    // Getters and Setters
+}
+5. TaxReturn Entity
+java
+Copy code
+@Entity
+@Table(name = "tax_return")
+public class TaxReturn {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long returnId;
+
+    @ManyToOne
+    @JoinColumn(name = "uid", nullable = false)
+    private User user;
+
+    @Column(name = "total_tax_paid")
+    private Double totalTaxPaid;
+
+    @Column(name = "total_tax_due")
+    private Double totalTaxDue;
+
+    @Temporal(TemporalType.DATE)
+    private Date returnDate;
+
+    // Getters and Setters
+}
+6. AuditStatus Entity
+java
+Copy code
+@Entity
+@Table(name = "audit_status")
+public class AuditStatus {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long statusId;
+
+    @Column(name = "status", nullable = false)
+    private String status; // Approved, Pending, Rejected
+
+    // Getters and Setters
+}
+7. TaxFileStatus Entity
+java
+Copy code
+@Entity
+@Table(name = "tax_file_status")
+public class TaxFileStatus {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long statusId;
+
+    @Column(name = "status", nullable = false)
+    private String status; // Filed, Pending, Not Filed
+
+    // Getters and Setters
+}
+8. AuditLogs Entity
+java
+Copy code
+@Entity
+@Table(name = "audit_logs")
+public class AuditLogs {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long logId;
+
+    @ManyToOne
+    @JoinColumn(name = "uid", nullable = false)
+    private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "auditor_id", nullable = false)
+    private User auditor;
+
+    @Column(name = "audit_comment")
+    private String auditComment;
+
+    @Temporal(TemporalType.DATE)
+    private Date auditDate;
+
+    // Getters and Setters
+}
+9. TaxSlab Entity
+java
+Copy code
+@Entity
+@Table(name = "tax_slab")
+public class TaxSlab {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long slabId;
+
+    @Column(name = "tax_rate")
+    private Double taxRate;
+
+    @Column(name = "min_income")
+    private Double minIncome;
+
+    @Column(name = "max_income")
+    private Double maxIncome;
+
+    @Column(name = "regime")
+    private String regime; // Old, New
+
+    // Getters and Setters
+}
+10. TaxDetails Entity
+java
+Copy code
+@Entity
+@Table(name = "tax_details")
+public class TaxDetails {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long taxDetailsId;
+
+    @ManyToOne
+    @JoinColumn(name = "uid", nullable = false)
+    private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "tax_slab_id", nullable = false)
+    private TaxSlab taxSlab;
+
+    @ManyToOne
+    @JoinColumn(name = "empid", nullable = false)
+    private Employee employee;
+
+    @Column(name = "total_income")
+    private Double totalIncome;
+
+    @Column(name = "tax_paid")
+    private Double taxPaid;
+
+    @Column(name = "tax_due")
+    private Double taxDue;
+
+    @Column(name = "gross_salary")
+    private Double grossSalary;
+
+    @Column(name = "net_salary")
+    private Double netSalary;
+
+    @Column(name = "hra_exemption")
+    private Double hraExemption;
+
+    @Column(name = "standard_deduction")
+    private Double standardDeduction;
+
+    @Column(name = "rebate_section_87a")
+    private Double rebateSection87a;
+
+    @Column(name = "final_tax_liability")
+    private Double finalTaxLiability;
+
+    @Temporal(TemporalType.DATE)
+    private Date financialYear;
+
+    // Getters and Setters
+}
+
+
+1. InvestmentDetails DAO Layer
+DAO Interface
+java
+Copy code
+public interface InvestmentDetailsDAO {
+    InvestmentDetails save(InvestmentDetails investmentDetails);
+    InvestmentDetails findById(Long investId);
+    List<InvestmentDetails> findAll();
+    void delete(Long investId);
+}
+DAO Implementation
+java
+Copy code
+@Repository
+public class InvestmentDetailsDAOImpl implements InvestmentDetailsDAO {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Override
+    public InvestmentDetails save(InvestmentDetails investmentDetails) {
+        entityManager.persist(investmentDetails);
+        return investmentDetails;
+    }
+
+    @Override
+    public InvestmentDetails findById(Long investId) {
+        return entityManager.find(InvestmentDetails.class, investId);
+    }
+
+    @Override
+    public List<InvestmentDetails> findAll() {
+        String query = "FROM InvestmentDetails";
+        return entityManager.createQuery(query, InvestmentDetails.class).getResultList();
+    }
+
+    @Override
+    public void delete(Long investId) {
+        InvestmentDetails investmentDetails = findById(investId);
+        if (investmentDetails != null) {
+            entityManager.remove(investmentDetails);
+        }
+    }
+}
+Service Interface
+java
+Copy code
+public interface InvestmentDetailsService {
+    InvestmentDetails addInvestmentDetails(InvestmentDetails investmentDetails);
+    InvestmentDetails getInvestmentDetailsById(Long investId);
+    List<InvestmentDetails> getAllInvestmentDetails();
+    void removeInvestmentDetails(Long investId);
+}
+Service Implementation
+java
+Copy code
+@Service
+public class InvestmentDetailsServiceImpl implements InvestmentDetailsService {
+
+    @Autowired
+    private InvestmentDetailsDAO investmentDetailsDAO;
+
+    @Override
+    public InvestmentDetails addInvestmentDetails(InvestmentDetails investmentDetails) {
+        return investmentDetailsDAO.save(investmentDetails);
+    }
+
+    @Override
+    public InvestmentDetails getInvestmentDetailsById(Long investId) {
+        return investmentDetailsDAO.findById(investId);
+    }
+
+    @Override
+    public List<InvestmentDetails> getAllInvestmentDetails() {
+        return investmentDetailsDAO.findAll();
+    }
+
+    @Override
+    public void removeInvestmentDetails(Long investId) {
+        investmentDetailsDAO.delete(investId);
+    }
+}
+2. Employee DAO Layer
+DAO Interface
+java
+Copy code
+public interface EmployeeDAO {
+    Employee save(Employee employee);
+    Employee findById(Long empId);
+    List<Employee> findAll();
+    void delete(Long empId);
+}
+DAO Implementation
+java
+Copy code
+@Repository
+public class EmployeeDAOImpl implements EmployeeDAO {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Override
+    public Employee save(Employee employee) {
+        entityManager.persist(employee);
+        return employee;
+    }
+
+    @Override
+    public Employee findById(Long empId) {
+        return entityManager.find(Employee.class, empId);
+    }
+
+    @Override
+    public List<Employee> findAll() {
+        String query = "FROM Employee";
+        return entityManager.createQuery(query, Employee.class).getResultList();
+    }
+
+    @Override
+    public void delete(Long empId) {
+        Employee employee = findById(empId);
+        if (employee != null) {
+            entityManager.remove(employee);
+        }
+    }
+}
+Service Interface
+java
+Copy code
+public interface EmployeeService {
+    Employee addEmployee(Employee employee);
+    Employee getEmployeeById(Long empId);
+    List<Employee> getAllEmployees();
+    void removeEmployee(Long empId);
+}
+Service Implementation
+java
+Copy code
+@Service
+public class EmployeeServiceImpl implements EmployeeService {
+
+    @Autowired
+    private EmployeeDAO employeeDAO;
+
+    @Override
+    public Employee addEmployee(Employee employee) {
+        return employeeDAO.save(employee);
+    }
+
+    @Override
+    public Employee getEmployeeById(Long empId) {
+        return employeeDAO.findById(empId);
+    }
+
+    @Override
+    public List<Employee> getAllEmployees() {
+        return employeeDAO.findAll();
+    }
+
+    @Override
+    public void removeEmployee(Long empId) {
+        employeeDAO.delete(empId);
+    }
+}
+3. User DAO Layer
+DAO Interface
+java
+Copy code
+public interface UserDAO {
+    User save(User user);
+    User findById(Long uid);
+    List<User> findAll();
+    void delete(Long uid);
+}
+DAO Implementation
+java
+Copy code
+@Repository
+public class UserDAOImpl implements UserDAO {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Override
+    public User save(User user) {
+        entityManager.persist(user);
+        return user;
+    }
+
+    @Override
+    public User findById(Long uid) {
+        return entityManager.find(User.class, uid);
+    }
+
+    @Override
+    public List<User> findAll() {
+        String query = "FROM User";
+        return entityManager.createQuery(query, User.class).getResultList();
+    }
+
+    @Override
+    public void delete(Long uid) {
+        User user = findById(uid);
+        if (user != null) {
+            entityManager.remove(user);
+        }
+    }
+}
+Service Interface
+java
+Copy code
+public interface UserService {
+    User addUser(User user);
+    User getUserById(Long uid);
+    List<User> getAllUsers();
+    void removeUser(Long uid);
+}
+Service Implementation
+java
+Copy code
+@Service
+public class UserServiceImpl implements UserService {
+
+    @Autowired
+    private UserDAO userDAO;
+
+    @Override
+    public User addUser(User user) {
+        return userDAO.save(user);
+    }
+
+    @Override
+    public User getUserById(Long uid) {
+        return userDAO.findById(uid);
+    }
+
+    @Override
+    public List<User> getAllUsers() {
+        return userDAO.findAll();
+    }
+
+    @Override
+    public void removeUser(Long uid) {
+        userDAO.delete(uid);
+    }
+}
+4. TaxClaim DAO Layer
+DAO Interface
+java
+Copy code
+public interface TaxClaimDAO {
+    TaxClaim save(TaxClaim taxClaim);
+    TaxClaim findById(Long claimId);
+    List<TaxClaim> findAll();
+    void delete(Long claimId);
+}
+DAO Implementation
+java
+Copy code
+@Repository
+public class TaxClaimDAOImpl implements TaxClaimDAO {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Override
+    public TaxClaim save(TaxClaim taxClaim) {
+        entityManager.persist(taxClaim);
+        return taxClaim;
+    }
+
+    @Override
+    public TaxClaim findById(Long claimId) {
+        return entityManager.find(TaxClaim.class, claimId);
+    }
+
+    @Override
+    public List<TaxClaim> findAll() {
+        String query = "FROM TaxClaim";
+        return entityManager.createQuery(query, TaxClaim.class).getResultList();
+    }
+
+    @Override
+    public void delete(Long claimId) {
+        TaxClaim taxClaim = findById(claimId);
+        if (taxClaim != null) {
+            entityManager.remove(taxClaim);
+        }
+    }
+}
+Service Interface
+java
+Copy code
+public interface TaxClaimService {
+    TaxClaim addTaxClaim(TaxClaim taxClaim);
+    TaxClaim getTaxClaimById(Long claimId);
+    List<TaxClaim> getAllTaxClaims();
+    void removeTaxClaim(Long claimId);
+}
+Service Implementation
+java
+Copy code
+@Service
+public class TaxClaimServiceImpl implements TaxClaimService {
+
+    @Autowired
+    private TaxClaimDAO taxClaimDAO;
+
+    @Override
+    public TaxClaim addTaxClaim(TaxClaim taxClaim) {
+        return taxClaimDAO.save(taxClaim);
+    }
+
+    @Override
+    public TaxClaim getTaxClaimById(Long claimId) {
+        return taxClaimDAO.findById(claimId);
+    }
+
+    @Override
+    public List<TaxClaim> getAllTaxClaims() {
+        return taxClaimDAO.findAll();
+    }
+
+    @Override
+    public void removeTaxClaim(Long claimId) {
+        taxClaimDAO.delete(claimId);
+    }
+}
+
+
+5. TaxReturn DAO Layer
+DAO Interface
+java
+Copy code
+public interface TaxReturnDAO {
+    TaxReturn save(TaxReturn taxReturn);
+    TaxReturn findById(Long returnId);
+    List<TaxReturn> findAll();
+    void delete(Long returnId);
+}
+DAO Implementation
+java
+Copy code
+@Repository
+public class TaxReturnDAOImpl implements TaxReturnDAO {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Override
+    public TaxReturn save(TaxReturn taxReturn) {
+        entityManager.persist(taxReturn);
+        return taxReturn;
+    }
+
+    @Override
+    public TaxReturn findById(Long returnId) {
+        return entityManager.find(TaxReturn.class, returnId);
+    }
+
+    @Override
+    public List<TaxReturn> findAll() {
+        String query = "FROM TaxReturn";
+        return entityManager.createQuery(query, TaxReturn.class).getResultList();
+    }
+
+    @Override
+    public void delete(Long returnId) {
+        TaxReturn taxReturn = findById(returnId);
+        if (taxReturn != null) {
+            entityManager.remove(taxReturn);
+        }
+    }
+}
+Service Interface
+java
+Copy code
+public interface TaxReturnService {
+    TaxReturn addTaxReturn(TaxReturn taxReturn);
+    TaxReturn getTaxReturnById(Long returnId);
+    List<TaxReturn> getAllTaxReturns();
+    void removeTaxReturn(Long returnId);
+}
+Service Implementation
+java
+Copy code
+@Service
+public class TaxReturnServiceImpl implements TaxReturnService {
+
+    @Autowired
+    private TaxReturnDAO taxReturnDAO;
+
+    @Override
+    public TaxReturn addTaxReturn(TaxReturn taxReturn) {
+        return taxReturnDAO.save(taxReturn);
+    }
+
+    @Override
+    public TaxReturn getTaxReturnById(Long returnId) {
+        return taxReturnDAO.findById(returnId);
+    }
+
+    @Override
+    public List<TaxReturn> getAllTaxReturns() {
+        return taxReturnDAO.findAll();
+    }
+
+    @Override
+    public void removeTaxReturn(Long returnId) {
+        taxReturnDAO.delete(returnId);
+    }
+}
+6. AuditStatus DAO Layer
+DAO Interface
+java
+Copy code
+public interface AuditStatusDAO {
+    AuditStatus save(AuditStatus auditStatus);
+    AuditStatus findById(Long auditStatusId);
+    List<AuditStatus> findAll();
+    void delete(Long auditStatusId);
+}
+DAO Implementation
+java
+Copy code
+@Repository
+public class AuditStatusDAOImpl implements AuditStatusDAO {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Override
+    public AuditStatus save(AuditStatus auditStatus) {
+        entityManager.persist(auditStatus);
+        return auditStatus;
+    }
+
+    @Override
+    public AuditStatus findById(Long auditStatusId) {
+        return entityManager.find(AuditStatus.class, auditStatusId);
+    }
+
+    @Override
+    public List<AuditStatus> findAll() {
+        String query = "FROM AuditStatus";
+        return entityManager.createQuery(query, AuditStatus.class).getResultList();
+    }
+
+    @Override
+    public void delete(Long auditStatusId) {
+        AuditStatus auditStatus = findById(auditStatusId);
+        if (auditStatus != null) {
+            entityManager.remove(auditStatus);
+        }
+    }
+}
+Service Interface
+java
+Copy code
+public interface AuditStatusService {
+    AuditStatus addAuditStatus(AuditStatus auditStatus);
+    AuditStatus getAuditStatusById(Long auditStatusId);
+    List<AuditStatus> getAllAuditStatuses();
+    void removeAuditStatus(Long auditStatusId);
+}
+Service Implementation
+java
+Copy code
+@Service
+public class AuditStatusServiceImpl implements AuditStatusService {
+
+    @Autowired
+    private AuditStatusDAO auditStatusDAO;
+
+    @Override
+    public AuditStatus addAuditStatus(AuditStatus auditStatus) {
+        return auditStatusDAO.save(auditStatus);
+    }
+
+    @Override
+    public AuditStatus getAuditStatusById(Long auditStatusId) {
+        return auditStatusDAO.findById(auditStatusId);
+    }
+
+    @Override
+    public List<AuditStatus> getAllAuditStatuses() {
+        return auditStatusDAO.findAll();
+    }
+
+    @Override
+    public void removeAuditStatus(Long auditStatusId) {
+        auditStatusDAO.delete(auditStatusId);
+    }
+}
+7. TaxFileStatus DAO Layer
+DAO Interface
+java
+Copy code
+public interface TaxFileStatusDAO {
+    TaxFileStatus save(TaxFileStatus taxFileStatus);
+    TaxFileStatus findById(Long fileStatusId);
+    List<TaxFileStatus> findAll();
+    void delete(Long fileStatusId);
+}
+DAO Implementation
+java
+Copy code
+@Repository
+public class TaxFileStatusDAOImpl implements TaxFileStatusDAO {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Override
+    public TaxFileStatus save(TaxFileStatus taxFileStatus) {
+        entityManager.persist(taxFileStatus);
+        return taxFileStatus;
+    }
+
+    @Override
+    public TaxFileStatus findById(Long fileStatusId) {
+        return entityManager.find(TaxFileStatus.class, fileStatusId);
+    }
+
+    @Override
+    public List<TaxFileStatus> findAll() {
+        String query = "FROM TaxFileStatus";
+        return entityManager.createQuery(query, TaxFileStatus.class).getResultList();
+    }
+
+    @Override
+    public void delete(Long fileStatusId) {
+        TaxFileStatus taxFileStatus = findById(fileStatusId);
+        if (taxFileStatus != null) {
+            entityManager.remove(taxFileStatus);
+        }
+    }
+}
+Service Interface
+java
+Copy code
+public interface TaxFileStatusService {
+    TaxFileStatus addTaxFileStatus(TaxFileStatus taxFileStatus);
+    TaxFileStatus getTaxFileStatusById(Long fileStatusId);
+    List<TaxFileStatus> getAllTaxFileStatuses();
+    void removeTaxFileStatus(Long fileStatusId);
+}
+Service Implementation
+java
+Copy code
+@Service
+public class TaxFileStatusServiceImpl implements TaxFileStatusService {
+
+    @Autowired
+    private TaxFileStatusDAO taxFileStatusDAO;
+
+    @Override
+    public TaxFileStatus addTaxFileStatus(TaxFileStatus taxFileStatus) {
+        return taxFileStatusDAO.save(taxFileStatus);
+    }
+
+    @Override
+    public TaxFileStatus getTaxFileStatusById(Long fileStatusId) {
+        return taxFileStatusDAO.findById(fileStatusId);
+    }
+
+    @Override
+    public List<TaxFileStatus> getAllTaxFileStatuses() {
+        return taxFileStatusDAO.findAll();
+    }
+
+    @Override
+    public void removeTaxFileStatus(Long fileStatusId) {
+        taxFileStatusDAO.delete(fileStatusId);
+    }
+}
+8. AuditLogs DAO Layer
+DAO Interface
+java
+Copy code
+public interface AuditLogsDAO {
+    AuditLogs save(AuditLogs auditLogs);
+    AuditLogs findById(Long logId);
+    List<AuditLogs> findAll();
+    void delete(Long logId);
+}
+DAO Implementation
+java
+Copy code
+@Repository
+public class AuditLogsDAOImpl implements AuditLogsDAO {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Override
+    public AuditLogs save(AuditLogs auditLogs) {
+        entityManager.persist(auditLogs);
+        return auditLogs;
+    }
+
+    @Override
+    public AuditLogs findById(Long logId) {
+        return entityManager.find(AuditLogs.class, logId);
+    }
+
+    @Override
+    public List<AuditLogs> findAll() {
+        String query = "FROM AuditLogs";
+        return entityManager.createQuery(query, AuditLogs.class).getResultList();
+    }
+
+    @Override
+    public void delete(Long logId) {
+        AuditLogs auditLogs = findById(logId);
+        if (auditLogs != null) {
+            entityManager.remove(auditLogs);
+        }
+    }
+}
+Service Interface
+java
+Copy code
+public interface AuditLogsService {
+    AuditLogs addAuditLogs(AuditLogs auditLogs);
+    AuditLogs getAuditLogsById(Long logId);
+    List<AuditLogs> getAllAuditLogs();
+    void removeAuditLogs(Long logId);
+}
+Service Implementation
+java
+Copy code
+@Service
+public class AuditLogsServiceImpl implements AuditLogsService {
+
+    @Autowired
+    private AuditLogsDAO auditLogsDAO;
+
+    @Override
+    public AuditLogs addAuditLogs(AuditLogs auditLogs) {
+        return auditLogsDAO.save(auditLogs);
+    }
+
+    @Override
+    public AuditLogs getAuditLogsById(Long logId) {
+        return auditLogsDAO.findById(logId);
+    }
+
+    @Override
+    public List<AuditLogs> getAllAuditLogs() {
+        return auditLogsDAO.findAll();
+    }
+
+    @Override
+    public void removeAuditLogs(Long logId) {
+        auditLogsDAO.delete(logId);
+    }
+}
+9. TaxSlab DAO Layer
+DAO Interface
+java
+Copy code
+public interface TaxSlabDAO {
+    TaxSlab save(TaxSlab taxSlab);
+    TaxSlab findById(Long slabId);
+    List<TaxSlab> findAll();
+    void delete(Long slabId);
+}
+
+9. TaxSlabDAOImpl Implementation (continued)
+java
+Copy code
+@Repository
+public class TaxSlabDAOImpl implements TaxSlabDAO {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Override
+    public TaxSlab save(TaxSlab taxSlab) {
+        if (taxSlab.getId() == null) {
+            entityManager.persist(taxSlab);
+            return taxSlab;
+        } else {
+            return entityManager.merge(taxSlab);
+        }
+    }
+
+    @Override
+    public TaxSlab findById(Long slabId) {
+        return entityManager.find(TaxSlab.class, slabId);
+    }
+
+    @Override
+    public List<TaxSlab> findAll() {
+        String query = "FROM TaxSlab";
+        return entityManager.createQuery(query, TaxSlab.class).getResultList();
+    }
+
+    @Override
+    public void delete(Long slabId) {
+        TaxSlab taxSlab = findById(slabId);
+        if (taxSlab != null) {
+            entityManager.remove(taxSlab);
+        }
+    }
+}
+10. TaxDetailsDAOImpl Implementation
+DAO Interface
+java
+Copy code
+public interface TaxDetailsDAO {
+    TaxDetails save(TaxDetails taxDetails);
+    TaxDetails findById(Long detailsId);
+    List<TaxDetails> findAll();
+    void delete(Long detailsId);
+}
+DAO Implementation
+java
+Copy code
+@Repository
+public class TaxDetailsDAOImpl implements TaxDetailsDAO {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Override
+    public TaxDetails save(TaxDetails taxDetails) {
+        if (taxDetails.getId() == null) {
+            entityManager.persist(taxDetails);
+            return taxDetails;
+        } else {
+            return entityManager.merge(taxDetails);
+        }
+    }
+
+    @Override
+    public TaxDetails findById(Long detailsId) {
+        return entityManager.find(TaxDetails.class, detailsId);
+    }
+
+    @Override
+    public List<TaxDetails> findAll() {
+        String query = "FROM TaxDetails";
+        return entityManager.createQuery(query, TaxDetails.class).getResultList();
+    }
+
+    @Override
+    public void delete(Long detailsId) {
+        TaxDetails taxDetails = findById(detailsId);
+        if (taxDetails != null) {
+            entityManager.remove(taxDetails);
+        }
+    }
+}
+Service Interface
+java
+Copy code
+public interface TaxDetailsService {
+    TaxDetails addTaxDetails(TaxDetails taxDetails);
+    TaxDetails getTaxDetailsById(Long detailsId);
+    List<TaxDetails> getAllTaxDetails();
+    void removeTaxDetails(Long detailsId);
+}
+Service Implementation
+java
+Copy code
+@Service
+public class TaxDetailsServiceImpl implements TaxDetailsService {
+
+    @Autowired
+    private TaxDetailsDAO taxDetailsDAO;
+
+    @Override
+    public TaxDetails addTaxDetails(TaxDetails taxDetails) {
+        return taxDetailsDAO.save(taxDetails);
+    }
+
+    @Override
+    public TaxDetails getTaxDetailsById(Long detailsId) {
+        return taxDetailsDAO.findById(detailsId);
+    }
+
+    @Override
+    public List<TaxDetails> getAllTaxDetails() {
+        return taxDetailsDAO.findAll();
+    }
+
+    @Override
+    public void removeTaxDetails(Long detailsId) {
+        taxDetailsDAO.delete(detailsId);
+    }
+}
+
+
+
+
