@@ -1,0 +1,268 @@
+Full Implementation in Java Without Spring Batch
+1. Define the Database Connection and Trade Data Entity
+You can use JDBC to connect to the database and perform read/write operations.
+
+java
+Copy code
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
+
+public class TradeData {
+    private String symbol;
+    private String date;
+    private double tradePrice;
+    private Double previousEma;
+
+    // Constructor, Getters and Setters
+
+    public static List<TradeData> fetchTradeData(String symbol, Connection connection) throws Exception {
+        String query = "SELECT date, symbol, trade_price, previous_ema FROM block_trade_data_analysis WHERE symbol = ? ORDER BY date ASC LIMIT 30";
+        PreparedStatement stmt = connection.prepareStatement(query);
+        stmt.setString(1, symbol);
+        ResultSet rs = stmt.executeQuery();
+
+        List<TradeData> tradeDataList = new ArrayList<>();
+        while (rs.next()) {
+            TradeData data = new TradeData();
+            data.setDate(rs.getString("date"));
+            data.setSymbol(rs.getString("symbol"));
+            data.setTradePrice(rs.getDouble("trade_price"));
+            data.setPreviousEma(rs.getDouble("previous_ema"));
+            tradeDataList.add(data);
+        }
+        return tradeDataList;
+    }
+
+    public static Connection getConnection() throws Exception {
+        // Setup your DB connection details here (JDBC)
+        String url = "jdbc:mysql://localhost:3306/tradedb";
+        String user = "root";
+        String password = "password";
+        return DriverManager.getConnection(url, user, password);
+    }
+}
+2. EMA Calculation Logic
+The formula for EMA is: 
+𝐸
+𝑀
+𝐴
+𝑡
+𝑜
+𝑑
+𝑎
+𝑦
+=
+(
+𝑇
+𝑟
+𝑎
+𝑑
+𝑒
+𝑃
+𝑟
+𝑖
+𝑐
+𝑒
+𝑡
+𝑜
+𝑑
+𝑎
+𝑦
+−
+𝐸
+𝑀
+𝐴
+𝑦
+𝑒
+𝑠
+𝑡
+𝑒
+𝑟
+𝑑
+𝑎
+𝑦
+)
+×
+𝑀
+𝑢
+𝑙
+𝑡
+𝑖
+𝑝
+𝑙
+𝑖
+𝑒
+𝑟
++
+𝐸
+𝑀
+𝐴
+𝑦
+𝑒
+𝑠
+𝑡
+𝑒
+𝑟
+𝑑
+𝑎
+𝑦
+EMA 
+today
+​
+ =(TradePrice 
+today
+​
+ −EMA 
+yesterday
+​
+ )×Multiplier+EMA 
+yesterday
+​
+  Where:
+
+Multiplier 
+=
+2
+𝑁
++
+1
+= 
+N+1
+2
+​
+  (for a 30-day EMA, 
+𝑁
+=
+30
+N=30)
+java
+Copy code
+public class EmaCalculator {
+
+    private static final int EMA_PERIOD = 30;
+
+    public static double calculateEma(double currentPrice, double previousEma) {
+        double multiplier = 2.0 / (EMA_PERIOD + 1);
+        return (currentPrice - previousEma) * multiplier + previousEma;
+    }
+
+    public static void processSymbol(String symbol) {
+        try (Connection connection = TradeData.getConnection()) {
+            List<TradeData> tradeDataList = TradeData.fetchTradeData(symbol, connection);
+
+            double previousEma = tradeDataList.get(0).getTradePrice();  // Use first price as the initial EMA
+            for (TradeData trade : tradeDataList) {
+                double ema = calculateEma(trade.getTradePrice(), previousEma);
+                previousEma = ema;
+
+                // Update the EMA back to the database
+                updateEmaInDatabase(trade.getDate(), trade.getSymbol(), ema, connection);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void updateEmaInDatabase(String date, String symbol, double ema, Connection connection) throws Exception {
+        String updateQuery = "UPDATE block_trade_data_analysis SET previous_ema = ? WHERE date = ? AND symbol = ?";
+        PreparedStatement stmt = connection.prepareStatement(updateQuery);
+        stmt.setDouble(1, ema);
+        stmt.setString(2, date);
+        stmt.setString(3, symbol);
+        stmt.executeUpdate();
+    }
+}
+3. Multithreading with ExecutorService
+To parallelize the EMA calculations across multiple symbols, we can use ExecutorService.
+
+java
+Copy code
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class EmaMultithreading {
+
+    private static final int NUMBER_OF_THREADS = 12;  // You can adjust this based on your system
+
+    public static void main(String[] args) {
+        try (Connection connection = TradeData.getConnection()) {
+            // Fetch all unique symbols from the database
+            List<String> symbols = fetchAllSymbols(connection);
+
+            // Create a thread pool
+            ExecutorService executorService = Executors.newFixedThreadPool(NUMBER_OF_THREADS);
+
+            // Process EMA calculation in parallel
+            for (String symbol : symbols) {
+                executorService.submit(() -> EmaCalculator.processSymbol(symbol));
+            }
+
+            executorService.shutdown();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static List<String> fetchAllSymbols(Connection connection) throws Exception {
+        String query = "SELECT DISTINCT symbol FROM block_trade_data_analysis";
+        PreparedStatement stmt = connection.prepareStatement(query);
+        ResultSet rs = stmt.executeQuery();
+
+        List<String> symbols = new ArrayList<>();
+        while (rs.next()) {
+            symbols.add(rs.getString("symbol"));
+        }
+        return symbols;
+    }
+}
+4. REST Endpoint to Fetch and Display EMA Data
+Once the EMAs are calculated and stored in the database, you can create a simple REST API using Spring Boot to retrieve and display the EMA data.
+
+Here’s how you can define a Spring Boot Controller to return EMA data:
+
+java
+Copy code
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+public class EmaController {
+
+    @Autowired
+    private EmaService emaService;
+
+    @GetMapping("/ema/{symbol}")
+    public List<TradeData> getEmaBySymbol(@PathVariable String symbol) {
+        return emaService.getEmaForSymbol(symbol);
+    }
+}
+And a simple Service class:
+
+java
+Copy code
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class EmaService {
+
+    public List<TradeData> getEmaForSymbol(String symbol) {
+        try (Connection connection = TradeData.getConnection()) {
+            return TradeData.fetchTradeData(symbol, connection);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+}
+
