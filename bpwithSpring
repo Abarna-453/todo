@@ -1,0 +1,229 @@
+Step 1: Define Composite Key Class
+We need a class to represent the composite key of date and symbol. This class should be marked with @Embeddable and used in the @EmbeddedId annotation in the entity class.
+
+java
+Copy code
+import java.io.Serializable;
+import java.time.LocalDate;
+import javax.persistence.Embeddable;
+import java.util.Objects;
+
+@Embeddable
+public class BlockTradeDataKey implements Serializable {
+
+    private LocalDate date;
+    private String symbol;
+
+    public BlockTradeDataKey() {}
+
+    public BlockTradeDataKey(LocalDate date, String symbol) {
+        this.date = date;
+        this.symbol = symbol;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
+    public void setDate(LocalDate date) {
+        this.date = date;
+    }
+
+    public String getSymbol() {
+        return symbol;
+    }
+
+    public void setSymbol(String symbol) {
+        this.symbol = symbol;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof BlockTradeDataKey)) return false;
+        BlockTradeDataKey that = (BlockTradeDataKey) o;
+        return Objects.equals(date, that.date) &&
+               Objects.equals(symbol, that.symbol);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(date, symbol);
+    }
+}
+Step 2: Modify the Entity Class
+In the BlockTradeDataAnalysis entity class, replace the simple primary key with an embedded ID (BlockTradeDataKey).
+
+java
+Copy code
+import javax.persistence.*;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "block_trade_data_analysis")
+public class BlockTradeDataAnalysis {
+
+    @EmbeddedId
+    private BlockTradeDataKey id;
+
+    private Double tradePrice;
+
+    @Column(name = "previous_ema")
+    private Double previousEma;
+
+    // Getters and setters
+    public BlockTradeDataKey getId() {
+        return id;
+    }
+
+    public void setId(BlockTradeDataKey id) {
+        this.id = id;
+    }
+
+    public Double getTradePrice() {
+        return tradePrice;
+    }
+
+    public void setTradePrice(Double tradePrice) {
+        this.tradePrice = tradePrice;
+    }
+
+    public Double getPreviousEma() {
+        return previousEma;
+    }
+
+    public void setPreviousEma(Double previousEma) {
+        this.previousEma = previousEma;
+    }
+}
+Step 3: Update the Repository Layer
+Now, your repository will work with the BlockTradeDataKey composite key.
+
+java
+Copy code
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+
+@Repository
+public interface BlockTradeDataAnalysisRepository extends JpaRepository<BlockTradeDataAnalysis, BlockTradeDataKey> {
+
+    // Fetch the last 30 days of data for a specific symbol ordered by date
+    @Query("SELECT b FROM BlockTradeDataAnalysis b WHERE b.id.symbol = :symbol ORDER BY b.id.date DESC")
+    List<BlockTradeDataAnalysis> findLast30DaysBySymbol(String symbol);
+}
+Step 4: Batch Processing
+For batch processing of EMA calculations, you can leverage Spring Batch or a custom batch approach using Spring Boot JPA's saveAll method. Here's an example of how you can batch update EMA values:
+
+java
+Copy code
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
+
+@Service
+public class BlockTradeDataBatchService {
+
+    @Autowired
+    private BlockTradeDataAnalysisRepository repository;
+
+    @Transactional
+    public void updateEmaInBatch(List<BlockTradeDataAnalysis> tradeDataList) {
+        for (BlockTradeDataAnalysis tradeData : tradeDataList) {
+            Double newEma = calculateEma(tradeData);
+            tradeData.setPreviousEma(newEma);
+        }
+        // Batch save the updates
+        repository.saveAll(tradeDataList);
+    }
+
+    private Double calculateEma(BlockTradeDataAnalysis tradeData) {
+        // Logic to calculate EMA goes here
+        // Placeholder implementation
+        return tradeData.getTradePrice() * 0.3 + (tradeData.getPreviousEma() == null ? 0.0 : tradeData.getPreviousEma()) * 0.7;
+    }
+}
+Step 5: Service Layer for Fetching EMA
+Now, update the service to fetch the 30-day EMA for a given symbol.
+
+java
+Copy code
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
+
+@Service
+public class BlockTradeDataService {
+
+    @Autowired
+    private BlockTradeDataAnalysisRepository repository;
+
+    public List<BlockTradeDataAnalysis> getLast30DaysBySymbol(String symbol) {
+        List<BlockTradeDataAnalysis> tradeDataList = repository.findLast30DaysBySymbol(symbol);
+        return tradeDataList.subList(0, Math.min(30, tradeDataList.size()));
+    }
+}
+Step 6: REST Controller
+Expose an endpoint to fetch the EMA data for a specific symbol, considering the composite key.
+
+java
+Copy code
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/emadata")
+public class BlockTradeDataController {
+
+    @Autowired
+    private BlockTradeDataService tradeDataService;
+
+    @GetMapping("/{symbol}")
+    public List<BlockTradeDataAnalysis> getEmaDataForSymbol(@PathVariable String symbol) {
+        return tradeDataService.getLast30DaysBySymbol(symbol);
+    }
+}
+7. Spring Boot Batch Configuration (Optional)
+If you decide to use Spring Batch for handling large datasets more efficiently, you'll need to define batch configurations. Here's a basic Spring Batch setup:
+
+java
+Copy code
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+@EnableBatchProcessing
+public class BatchConfig {
+
+    @Bean
+    public Job job(JobBuilderFactory jobBuilderFactory, StepBuilderFactory stepBuilderFactory,
+                   BlockTradeDataBatchService batchService) {
+        return jobBuilderFactory.get("calculateEmaJob")
+                .incrementer(new RunIdIncrementer())
+                .start(step(stepBuilderFactory, batchService))
+                .build();
+    }
+
+    @Bean
+    public Step step(StepBuilderFactory stepBuilderFactory, BlockTradeDataBatchService batchService) {
+        return stepBuilderFactory.get("calculateEmaStep")
+                .<BlockTradeDataAnalysis, BlockTradeDataAnalysis>chunk(100)
+                .reader(reader())
+                .processor(processor(batchService))
+                .writer(writer())
+                .build();
+    }
+
+    // Define reader, processor, and writer for Spring Batch
+    // ...
+}
+Conclusion
+Composite Key: The primary key is now composed of date and symbol, handled using @EmbeddedId.
+Batch Processing: You can update EMA values in batches, either with Spring Batch or manually using saveAll with transaction management.
+JPA Integration: Spring Boot JPA is used to handle database operations and efficiently query EMA values for the last 30 days for each symbol.
+REST Endpoint: A REST API is provided to fetch the EMA values for a particular symbol.
