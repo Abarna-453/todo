@@ -1,3 +1,112 @@
+-- Data for CDSL
+BEGIN
+    FOR i IN 1..30 LOOP
+        INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'CDSL', 1500 + i * DBMS_RANDOM.VALUE(-5, 5), NULL);
+    END LOOP;
+END;
+/
+
+-- Data for CPS
+BEGIN
+    FOR i IN 1..30 LOOP
+        INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'CPS', 2000 + i * DBMS_RANDOM.VALUE(-10, 10), NULL);
+    END LOOP;
+END;
+/
+
+-- Data for DKEGL
+BEGIN
+    FOR i IN 1..30 LOOP
+        INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'DKEGL', 500 + i * DBMS_RANDOM.VALUE(-2, 2), NULL);
+    END LOOP;
+END;
+/
+
+-- Data for DENTALKART
+BEGIN
+    FOR i IN 1..30 LOOP
+        INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'DENTALKART', 100 + i * DBMS_RANDOM.VALUE(-0.5, 0.5), NULL);
+    END LOOP;
+END;
+/
+
+-- Data for DIFFNKG
+BEGIN
+    FOR i IN 1..30 LOOP
+        INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'DIFFNKG', 250 + i * DBMS_RANDOM.VALUE(-3, 3), NULL);
+    END LOOP;
+END;
+/
+
+-- Data for GTL
+BEGIN
+    FOR i IN 1..30 LOOP
+        INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'GTL', 1000 + i * DBMS_RANDOM.VALUE(-8, 8), NULL);
+    END LOOP;
+END;
+/
+
+-- Data for HEUBACHIND
+BEGIN
+    FOR i IN 1..30 LOOP
+        INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'HEUBACHIND', 3000 + i * DBMS_RANDOM.VALUE(-15, 15), NULL);
+    END LOOP;
+END;
+/
+
+-- Data for HVA
+BEGIN
+    FOR i IN 1..30 LOOP
+        INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'HVA', 1800 + i * DBMS_RANDOM.VALUE(-6, 6), NULL);
+    END LOOP;
+END;
+/
+
+-- Data for MAHICKRA
+BEGIN
+    FOR i IN 1..30 LOOP
+        INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'MAHICKRA', 900 + i * DBMS_RANDOM.VALUE(-3, 3), NULL);
+    END LOOP;
+END;
+/
+
+-- Data for MAXPOSURE
+BEGIN
+    FOR i IN 1..30 LOOP
+        INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'MAXPOSURE', 1200 + i * DBMS_RANDOM.VALUE(-4, 4), NULL);
+    END LOOP;
+END;
+/
+
+-- Data for KBCGLOBAL
+BEGIN
+    FOR i IN 1..30 LOOP
+        INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'KBCGLOBAL', 500 + i * DBMS_RANDOM.VALUE(-2, 2), NULL);
+    END LOOP;
+END;
+/
+
+-- Data for TARIL
+BEGIN
+    FOR i IN 1..30 LOOP
+        INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'TARIL', 800 + i * DBMS_RANDOM.VALUE(-5, 5), NULL);
+    END LOOP;
+END;
+/
+
+
 INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema) VALUES
 -- Data for Ashoka Metcast Limited
 (TO_DATE('20-SEP-2023', 'DD-MON-YYYY'), 'ASHOKAMET', 30.00, NULL),
@@ -13,6 +122,13 @@ INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
 (TO_DATE('19-OCT-2024', 'DD-MON-YYYY'), 'ATALREAL', 9.00, NULL),
 (TO_DATE('19-OCT-2024', 'DD-MON-YYYY'), 'BSE', 4800.00, NULL);
 
+CREATE TABLE tms_block_trade_data (
+    trade_date DATE,
+    symbol VARCHAR2(50),
+    trade_price NUMBER(10, 2),
+    previous_ema NUMBER(10, 2), -- This will be NULL initially
+    PRIMARY KEY (trade_date, symbol)
+);
 
 1. Roles Entity
 RolesEntity.java
