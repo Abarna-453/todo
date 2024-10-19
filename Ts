@@ -1,3 +1,19 @@
+INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema) VALUES
+-- Data for Ashoka Metcast Limited
+(TO_DATE('20-SEP-2023', 'DD-MON-YYYY'), 'ASHOKAMET', 30.00, NULL),
+(TO_DATE('21-SEP-2023', 'DD-MON-YYYY'), 'ASHOKAMET', 31.00, NULL),
+-- Data for Atal Realtech Limited
+(TO_DATE('20-SEP-2023', 'DD-MON-YYYY'), 'ATALREAL', 8.50, NULL),
+(TO_DATE('21-SEP-2023', 'DD-MON-YYYY'), 'ATALREAL', 8.75, NULL),
+-- Data for BSE Limited
+(TO_DATE('20-SEP-2023', 'DD-MON-YYYY'), 'BSE', 4700.00, NULL),
+(TO_DATE('21-SEP-2023', 'DD-MON-YYYY'), 'BSE', 4710.00, NULL),
+-- Add more data for additional symbols and dates
+(TO_DATE('19-OCT-2024', 'DD-MON-YYYY'), 'ASHOKAMET', 32.50, NULL),
+(TO_DATE('19-OCT-2024', 'DD-MON-YYYY'), 'ATALREAL', 9.00, NULL),
+(TO_DATE('19-OCT-2024', 'DD-MON-YYYY'), 'BSE', 4800.00, NULL);
+
+
 1. Roles Entity
 RolesEntity.java
 java
