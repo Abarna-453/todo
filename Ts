@@ -2,7 +2,7 @@
 BEGIN
     FOR i IN 1..30 LOOP
         INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
-        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'CDSL', 1500 + i * DBMS_RANDOM.VALUE(-5, 5), NULL);
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'CDSL', 1500 + MOD(i * 3, 11) - 5, NULL);
     END LOOP;
 END;
 /
@@ -11,7 +11,7 @@ END;
 BEGIN
     FOR i IN 1..30 LOOP
         INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
-        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'CPS', 2000 + i * DBMS_RANDOM.VALUE(-10, 10), NULL);
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'CPS', 2000 + MOD(i * 5, 21) - 10, NULL);
     END LOOP;
 END;
 /
@@ -20,7 +20,7 @@ END;
 BEGIN
     FOR i IN 1..30 LOOP
         INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
-        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'DKEGL', 500 + i * DBMS_RANDOM.VALUE(-2, 2), NULL);
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'DKEGL', 500 + MOD(i * 2, 5) - 2, NULL);
     END LOOP;
 END;
 /
@@ -29,7 +29,7 @@ END;
 BEGIN
     FOR i IN 1..30 LOOP
         INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
-        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'DENTALKART', 100 + i * DBMS_RANDOM.VALUE(-0.5, 0.5), NULL);
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'DENTALKART', 100 + MOD(i, 2) - 0.5, NULL);
     END LOOP;
 END;
 /
@@ -38,7 +38,7 @@ END;
 BEGIN
     FOR i IN 1..30 LOOP
         INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
-        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'DIFFNKG', 250 + i * DBMS_RANDOM.VALUE(-3, 3), NULL);
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'DIFFNKG', 250 + MOD(i * 4, 7) - 3, NULL);
     END LOOP;
 END;
 /
@@ -47,7 +47,7 @@ END;
 BEGIN
     FOR i IN 1..30 LOOP
         INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
-        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'GTL', 1000 + i * DBMS_RANDOM.VALUE(-8, 8), NULL);
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'GTL', 1000 + MOD(i * 6, 16) - 8, NULL);
     END LOOP;
 END;
 /
@@ -56,7 +56,7 @@ END;
 BEGIN
     FOR i IN 1..30 LOOP
         INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
-        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'HEUBACHIND', 3000 + i * DBMS_RANDOM.VALUE(-15, 15), NULL);
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'HEUBACHIND', 3000 + MOD(i * 2, 31) - 15, NULL);
     END LOOP;
 END;
 /
@@ -65,7 +65,7 @@ END;
 BEGIN
     FOR i IN 1..30 LOOP
         INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
-        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'HVA', 1800 + i * DBMS_RANDOM.VALUE(-6, 6), NULL);
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'HVA', 1800 + MOD(i * 4, 13) - 6, NULL);
     END LOOP;
 END;
 /
@@ -74,7 +74,7 @@ END;
 BEGIN
     FOR i IN 1..30 LOOP
         INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
-        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'MAHICKRA', 900 + i * DBMS_RANDOM.VALUE(-3, 3), NULL);
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'MAHICKRA', 900 + MOD(i * 3, 6) - 3, NULL);
     END LOOP;
 END;
 /
@@ -83,7 +83,7 @@ END;
 BEGIN
     FOR i IN 1..30 LOOP
         INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
-        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'MAXPOSURE', 1200 + i * DBMS_RANDOM.VALUE(-4, 4), NULL);
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'MAXPOSURE', 1200 + MOD(i * 2, 8) - 4, NULL);
     END LOOP;
 END;
 /
@@ -92,16 +92,17 @@ END;
 BEGIN
     FOR i IN 1..30 LOOP
         INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
-        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'KBCGLOBAL', 500 + i * DBMS_RANDOM.VALUE(-2, 2), NULL);
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'KBCGLOBAL', 500 + MOD(i * 2, 5) - 2, NULL);
     END LOOP;
 END;
 /
+
 
 -- Data for TARIL
 BEGIN
     FOR i IN 1..30 LOOP
         INSERT INTO tms_block_trade_data (trade_date, symbol, trade_price, previous_ema)
-        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'TARIL', 800 + i * DBMS_RANDOM.VALUE(-5, 5), NULL);
+        VALUES (TO_DATE('19-SEP-2023', 'DD-MON-YYYY') + i, 'TARIL', 800 + i * MOD(i*13,11)-5, NULL);
     END LOOP;
 END;
 /
