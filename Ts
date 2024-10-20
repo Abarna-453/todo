@@ -131,6 +131,280 @@ CREATE TABLE tms_block_trade_data (
     PRIMARY KEY (trade_date, symbol)
 );
 
+
+
+
+
+
+To implement this in Spring Batch, the key steps are to:
+
+Read the data from the database.
+Partition the data by symbol, where each symbol's data is treated as a separate batch.
+Process the data by calculating the EMA (Exponential Moving Average) for the last 30 days.
+Update the database with the calculated EMA.
+Expose an endpoint to fetch the results.
+Here's the high-level implementation approach for this requirement:
+
+1. Spring Batch Configuration
+You'll define a Spring Batch job with a reader, processor, and writer to handle the partitioned EMA calculations.
+
+BatchConfig.java
+This class configures the Spring Batch job.
+
+java
+Copy code
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.partition.support.Partitioner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+@EnableBatchProcessing
+public class BatchConfig {
+
+    @Bean
+    public Job calculateEmaJob(JobBuilderFactory jobBuilderFactory, Step partitionStep) {
+        return jobBuilderFactory.get("calculateEmaJob")
+            .incrementer(new RunIdIncrementer())
+            .start(partitionStep)
+            .build();
+    }
+
+    @Bean
+    public Step partitionStep(StepBuilderFactory stepBuilderFactory, Partitioner partitioner, Step emaCalculationStep) {
+        return stepBuilderFactory.get("partitionStep")
+            .partitioner(emaCalculationStep)
+            .partitioner("symbolPartitioner", partitioner)
+            .gridSize(5)  // Configure based on the number of partitions
+            .build();
+    }
+}
+2. Symbol Partitioner
+This partitioner divides the data by symbol, creating separate batches for each symbol.
+
+SymbolPartitioner.java
+This class partitions the data by symbol.
+
+java
+Copy code
+import org.springframework.batch.core.partition.support.Partitioner;
+import org.springframework.batch.item.ExecutionContext;
+import org.springframework.stereotype.Component;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Component
+public class SymbolPartitioner implements Partitioner {
+
+    private final BlockTradeDataAnalysisRepository repository;
+
+    public SymbolPartitioner(BlockTradeDataAnalysisRepository repository) {
+        this.repository = repository;
+    }
+
+    @Override
+    public Map<String, ExecutionContext> partition(int gridSize) {
+        List<String> symbols = repository.findDistinctSymbols(); // Query to get distinct symbols
+
+        Map<String, ExecutionContext> partitions = new HashMap<>();
+
+        for (int i = 0; i < symbols.size(); i++) {
+            ExecutionContext context = new ExecutionContext();
+            context.putString("symbol", symbols.get(i));
+            partitions.put("partition" + i, context);
+        }
+
+        return partitions;
+    }
+}
+3. Reader
+The reader fetches the data for each symbol for processing.
+
+BlockTradeDataItemReader.java
+This reader pulls data for a specific symbol.
+
+java
+Copy code
+import org.springframework.batch.item.ItemReader;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+@Component
+public class BlockTradeDataItemReader implements ItemReader<BlockTradeDataAnalysis> {
+
+    @Autowired
+    private BlockTradeDataAnalysisRepository repository;
+
+    private List<BlockTradeDataAnalysis> tradeDataList;
+    private int currentIndex = 0;
+    private String symbol;
+
+    public void setSymbol(String symbol) {
+        this.symbol = symbol;
+        this.currentIndex = 0;
+        this.tradeDataList = repository.findLast30DaysBySymbol(symbol);
+    }
+
+    @Override
+    public BlockTradeDataAnalysis read() {
+        if (currentIndex < tradeDataList.size()) {
+            return tradeDataList.get(currentIndex++);
+        } else {
+            return null; // End of batch
+        }
+    }
+}
+4. Processor
+The processor calculates the EMA for each item (i.e., each day’s data for the symbol).
+
+EmaCalculationProcessor.java
+This processor calculates the EMA for each day's data.
+
+java
+Copy code
+import org.springframework.batch.item.ItemProcessor;
+import org.springframework.stereotype.Component;
+
+@Component
+public class EmaCalculationProcessor implements ItemProcessor<BlockTradeDataAnalysis, BlockTradeDataAnalysis> {
+
+    @Override
+    public BlockTradeDataAnalysis process(BlockTradeDataAnalysis tradeData) {
+        Double newEma = calculateEma(tradeData);
+        tradeData.setPreviousEma(newEma);
+        return tradeData;
+    }
+
+    private Double calculateEma(BlockTradeDataAnalysis tradeData) {
+        Double previousEma = tradeData.getPreviousEma();
+        Double tradePrice = tradeData.getTradePrice();
+        double smoothing = 2.0 / (30 + 1); // 30-day EMA smoothing factor
+        return (tradePrice - previousEma) * smoothing + previousEma;
+    }
+}
+5. Writer
+The writer updates the database with the newly calculated EMA values.
+
+BlockTradeDataItemWriter.java
+This writer saves the updated trade data.
+
+java
+Copy code
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+@Component
+public class BlockTradeDataItemWriter implements ItemWriter<BlockTradeDataAnalysis> {
+
+    @Autowired
+    private BlockTradeDataAnalysisRepository repository;
+
+    @Override
+    public void write(List<? extends BlockTradeDataAnalysis> tradeDataList) {
+        repository.saveAll(tradeDataList); // Batch save the updates
+    }
+}
+6. Step Configuration
+Now configure the step that processes each batch.
+
+BatchStepConfig.java
+Configure the Step for Spring Batch.
+
+java
+Copy code
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class BatchStepConfig {
+
+    @Bean
+    public Step emaCalculationStep(StepBuilderFactory stepBuilderFactory,
+                                   BlockTradeDataItemReader reader,
+                                   EmaCalculationProcessor processor,
+                                   BlockTradeDataItemWriter writer) {
+        return stepBuilderFactory.get("emaCalculationStep")
+            .<BlockTradeDataAnalysis, BlockTradeDataAnalysis>chunk(10)
+            .reader(reader)
+            .processor(processor)
+            .writer(writer)
+            .build();
+    }
+}
+7. Endpoint to Trigger and Fetch Results
+Create a REST controller to trigger the batch process and fetch the results after processing.
+
+BatchController.java
+java
+Copy code
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobLauncher;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/batch")
+public class BatchController {
+
+    @Autowired
+    private JobLauncher jobLauncher;
+
+    @Autowired
+    private Job calculateEmaJob;
+
+    @Autowired
+    private BlockTradeDataAnalysisRepository repository;
+
+    @GetMapping("/run")
+    public String runBatchJob() {
+        try {
+            jobLauncher.run(calculateEmaJob, new JobParameters());
+            return "Batch job has been invoked!";
+        } catch (Exception e) {
+            return "Error occurred while running batch job: " + e.getMessage();
+        }
+    }
+
+    @GetMapping("/results")
+    public List<BlockTradeDataAnalysis> fetchResults() {
+        return repository.findAll();
+    }
+}
+8. Testing the Spring Batch
+Trigger the job: You can call /api/batch/run to start the batch job.
+Fetch results: Once the batch job finishes, you can use /api/batch/results to get the updated EMA values for each symbol.
+Final Notes
+Partitioning is used to treat each symbol's data as an individual batch.
+The EMA calculation is done in the processor for the last 30 days of each symbol’s data.
+The batch job processes each symbol's data concurrently using Spring Batch's partitioning.
+You can adjust the gridSize to control how many partitions run in parallel.
+This setup ensures that each symbol's data is processed in separate batches, and the EMA is calculated for each day in the 30-day window.
+
+
+
+
+
+
+
+
+
 1. Roles Entity
 RolesEntity.java
 java
