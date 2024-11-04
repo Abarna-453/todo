@@ -1,0 +1,142 @@
+
+
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.core.configuration.annotation.JobBuilder;
+import org.springframework.batch.core.configuration.annotation.StepBuilder;
+import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.PartitionStepBuilder;
+import org.springframework.batch.core.step.builder.StepBuilderFactory;
+import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.database.builder.RepositoryItemReaderBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.TaskExecutor;
+
+import java.util.Collections;
+
+@Configuration
+@EnableBatchProcessing
+public class BatchConfig {
+
+    @Autowired
+    private JobRepository jobRepository;
+
+    @Autowired
+    private EmaProcessor emaProcessor;
+
+    @Autowired
+    private TradeWriter tradeWriter;
+
+    @Autowired
+    private TaskExecutor taskExecutor;
+
+    @Autowired
+    private TradeItemReader tradeItemReader; // Autowired TradeItemReader
+
+    @Bean
+    public Step calculateEmaStep() {
+        return new StepBuilder("calculateEmaStep", jobRepository)
+                .<Trade, Trade>chunk(10) // Define chunk size
+                .reader(tradeItemReader.tradeItemReader(null)) // Pass the symbol dynamically as needed
+                .processor(emaProcessor)
+                .writer(tradeWriter)
+                .faultTolerant()
+                .retryLimit(3)
+                .retry(Exception.class)
+                .skipLimit(5)
+                .skip(Exception.class)
+                .taskExecutor(taskExecutor) // Use TaskExecutor for parallel processing
+                .throttleLimit(4) // Limit the number of concurrent threads
+                .build();
+    }
+
+    @Bean
+    public Step partitionedStep() {
+        return new StepBuilder("partitionedStep", jobRepository)
+                .partitioner("calculateEmaStep", new SymbolPartitioner()) // Define partitioner for trade symbols
+                .step(calculateEmaStep()) // Use the calculateEmaStep for each partition
+                .gridSize(4) // Number of partitions
+                .taskExecutor(taskExecutor) // Use TaskExecutor for parallel processing
+                .build();
+    }
+
+    @Bean
+    public Job emaJob() {
+        return new JobBuilder("emaJob", jobRepository)
+                .incrementer(new RunIdIncrementer()) // Allows multiple job runs with the same parameters
+                .start(partitionedStep()) // Start with the partitioned step
+                .build();
+    }
+}
+
+
+
+import org.springframework.batch.core.partition.support.Partitioner;
+import org.springframework.batch.item.ItemReader;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class SymbolPartitioner implements Partitioner {
+
+    @Autowired
+    private TradeRepository tradeRepository;
+
+    @Override
+    public Map<String, ExecutionContext> partition(int gridSize) {
+        Map<String, ExecutionContext> partitions = new HashMap<>();
+
+        // Fetch distinct symbols to partition by
+        List<String> symbols = tradeRepository.findDistinctSymbols();
+        
+        // Create partitions based on distinct symbols
+        int partitionCount = Math.min(gridSize, symbols.size());
+        for (int i = 0; i < partitionCount; i++) {
+            ExecutionContext context = new ExecutionContext();
+            context.putString("symbol", symbols.get(i)); // Set symbol for this partition
+            partitions.put("partition" + i, context); // Unique key for each partition
+        }
+        return partitions;
+    }
+}
+
+
+
+import org.springframework.batch.item.Chunk;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Component
+public class TradeWriter implements ItemWriter<Trade> {
+
+    @Autowired
+    private TradeRepository tradeRepository;
+
+    // Required implementation of the ItemWriter interface
+    @Override
+    public void write(Chunk<? extends Trade> chunk) throws Exception {
+        // Filter trades where EMA is null or not calculated (you can adjust the condition as needed)
+        List<Trade> tradesToSave = chunk.getItems().stream()
+                .filter(trade -> trade.getEma() == null) // or some other condition
+                .collect(Collectors.toList());
+
+        // Save the filtered trades to the repository
+        if (!tradesToSave.isEmpty()) {
+            tradeRepository.saveAll(tradesToSave);
+        }
+    }
+}
+
+
