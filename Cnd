@@ -1,3 +1,50 @@
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
+@Configuration
+public class TaskExecutorConfig {
+
+    @Bean
+    public TaskExecutor taskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(4); // Minimum number of threads
+        executor.setMaxPoolSize(8);   // Maximum number of threads
+        executor.setQueueCapacity(100); // Capacity of the queue for holding tasks
+        executor.setThreadNamePrefix("EMA-Thread-"); // Prefix for thread names
+        executor.initialize(); // Initialize the executor
+        return executor;
+    }
+}
+
+import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.database.builder.RepositoryItemReaderBuilder;
+import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.stereotype.Component;
+
+import java.util.Collections;
+
+@Component
+public class TradeItemReader {
+
+    @Autowired
+    private TradeRepository tradeRepository;
+
+    @Bean
+    @StepScope
+    public ItemReader<Trade> tradeItemReader(@Value("#{stepExecutionContext['symbol']}") String symbol) {
+        return new RepositoryItemReaderBuilder<Trade>()
+                .name("tradeItemReader")
+                .repository(tradeRepository)
+                .methodName("findBySymbolOrdered")
+                .arguments(Collections.singletonList(symbol))
+                .build();
+    }
+}
 
 
 import org.springframework.batch.core.Job;
