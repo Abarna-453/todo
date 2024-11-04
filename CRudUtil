@@ -523,3 +523,52 @@ Partitioning: SymbolPartitioner divides the data based on the symbol. Each parti
 Multithreading: A ThreadPoolTaskExecutor is used to handle multiple threads for processing EMA calculations.
 Error Handling: Each step has retry and skip logic to handle failures without data corruption.
 Data Integrity: Since each symbol is processed independently, there's minimal risk of data corruption due to race conditions. The retry mechanism ensures that temporary failures don't halt the batch process.
+
+@Configuration
+public class BatchConfig {
+
+    @Autowired
+    private JobRepository jobRepository;
+    @Autowired
+    private EmaProcessor emaProcessor;
+    @Autowired
+    private TradeWriter tradeWriter;
+    @Autowired
+    private TaskExecutor taskExecutor;
+
+    @Bean
+    public Step calculateEmaStep() {
+        return new StepBuilder("calculateEmaStep", jobRepository)
+                .<Trade, Trade>chunk(10)
+                .reader(tradeItemReader(null))
+                .processor(emaProcessor)
+                .writer(tradeWriter)
+                .faultTolerant()
+                .retryLimit(3)
+                .retry(Exception.class)
+                .skipLimit(5)
+                .skip(Exception.class)
+                .taskExecutor(taskExecutor)
+                .throttleLimit(4)
+                .build();
+    }
+
+    @Bean
+    public Step partitionedStep() {
+        return new StepBuilder("partitionedStep", jobRepository)
+                .partitioner("calculateEmaStep", new SymbolPartitioner())
+                .step(calculateEmaStep())
+                .gridSize(4)
+                .taskExecutor(taskExecutor)
+                .build();
+    }
+
+    @Bean
+    public Job emaJob() {
+        return new JobBuilder("emaJob", jobRepository)
+                .start(partitionedStep())
+                .build();
+    }
+}
+
+
