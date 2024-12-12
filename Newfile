@@ -1,3 +1,42 @@
+package com.bms.bms_spring_boot_rest_data_project.config;
+
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+import com.bms.bms_spring_boot_rest_data_project.dao.UserInfoDao;
+import com.bms.bms_spring_boot_rest_data_project.dao.entity.UserInfoEntity;
+
+@Service
+public class UserInfoUserDetailsServiceImpl implements UserDetailsService {
+
+    @Autowired
+    UserInfoDao userInfoDao;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        Optional<UserInfoEntity> userInfoEntity = userInfoDao.findByName(username);
+
+        return userInfoEntity
+                .map(userInfo -> {
+                    // Assuming the user has exactly one role, we pass the role directly.
+                    String userRole = userInfo.getAllRoles().stream()
+                            .findFirst()  // Get the first role (since there will only be one)
+                            .map(role -> role.getRoleName())  // Extract role name
+                            .orElseThrow(() -> new RuntimeException("User role not found"));
+                    
+                    // Returning UserDetails with only one role
+                    return new UserDetailsServiceImpl(userInfo.getName(), userInfo.getPassword(), userRole);
+                })
+                .orElseThrow(() -> new UsernameNotFoundException(username + " not found"));
+    }
+}
+
+
 @Service
 public class UserInfoDetailsServiceImpl implements UserDetailsService {
 
