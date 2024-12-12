@@ -237,6 +237,161 @@ public class UserController {
 
 
 
+To implement a PATCH request for updating a UserEntity (specifically for phoneNo and panCardNo) while maintaining the relationships with CredsEntity and RolesEntity, you will need to create a service, service implementation, controller, and the required DTOs for this update operation. Below is an example implementation using Spring Boot.
+
+1. DTO for Update Request
+We’ll use a Data Transfer Object (DTO) to represent the data that can be updated (in this case, phoneNo and panCardNo).
+
+UserUpdateDTO.java
+java
+Copy code
+package com.bms.bms_spring_boot_rest_data_project.dto;
+
+public class UserUpdateDTO {
+    private String phoneNo;
+    private String panCardNo;
+
+    // Getters and Setters
+    public String getPhoneNo() {
+        return phoneNo;
+    }
+
+    public void setPhoneNo(String phoneNo) {
+        this.phoneNo = phoneNo;
+    }
+
+    public String getPanCardNo() {
+        return panCardNo;
+    }
+
+    public void setPanCardNo(String panCardNo) {
+        this.panCardNo = panCardNo;
+    }
+}
+2. Service Interface
+The service interface defines the update functionality.
+
+UserService.java
+java
+Copy code
+package com.bms.bms_spring_boot_rest_data_project.service;
+
+import com.bms.bms_spring_boot_rest_data_project.dto.UserUpdateDTO;
+
+public interface UserService {
+    void updateUserDetails(Long userId, UserUpdateDTO userUpdateDTO);
+}
+3. Service Implementation
+The service implementation will handle the logic for updating the UserEntity by fetching the user from the database, modifying the necessary fields (phoneNo and panCardNo), and saving the changes.
+
+UserServiceImpl.java
+java
+Copy code
+package com.bms.bms_spring_boot_rest_data_project.service.impl;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import com.bms.bms_spring_boot_rest_data_project.dao.UserInfoDao;
+import com.bms.bms_spring_boot_rest_data_project.dao.entity.UserInfoEntity;
+import com.bms.bms_spring_boot_rest_data_project.dto.UserUpdateDTO;
+import com.bms.bms_spring_boot_rest_data_project.service.UserService;
+import java.util.Optional;
+
+@Service
+public class UserServiceImpl implements UserService {
+
+    @Autowired
+    private UserInfoDao userInfoDao;
+
+    @Override
+    public void updateUserDetails(Long userId, UserUpdateDTO userUpdateDTO) {
+        Optional<UserInfoEntity> userEntityOptional = userInfoDao.findById(userId);
+
+        if (userEntityOptional.isPresent()) {
+            UserInfoEntity userEntity = userEntityOptional.get();
+            
+            // Update the phone number and PAN card number
+            userEntity.setPhoneNo(userUpdateDTO.getPhoneNo());
+            userEntity.setPanCardNo(userUpdateDTO.getPanCardNo());
+            
+            // Save the updated entity
+            userInfoDao.save(userEntity);
+        } else {
+            throw new RuntimeException("User not found with id " + userId);
+        }
+    }
+}
+4. Controller
+The controller will map the PATCH request to the appropriate service method, passing the UserUpdateDTO for updating phoneNo and panCardNo.
+
+UserController.java
+java
+Copy code
+package com.bms.bms_spring_boot_rest_data_project.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+import com.bms.bms_spring_boot_rest_data_project.dto.UserUpdateDTO;
+import com.bms.bms_spring_boot_rest_data_project.service.UserService;
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+    @Autowired
+    private UserService userService;
+
+    // PatchMapping to update phoneNo and panCardNo
+    @PatchMapping("/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateUser(@PathVariable Long userId, @RequestBody UserUpdateDTO userUpdateDTO) {
+        userService.updateUserDetails(userId, userUpdateDTO);
+    }
+}
+5. DAO (Data Access Object)
+The DAO layer is assumed to have basic findById() and save() methods. Here’s an example for UserInfoDao.
+
+UserInfoDao.java
+java
+Copy code
+package com.bms.bms_spring_boot_rest_data_project.dao;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import com.bms.bms_spring_boot_rest_data_project.dao.entity.UserInfoEntity;
+
+public interface UserInfoDao extends JpaRepository<UserInfoEntity, Long> {
+    // Custom query methods, if necessary
+}
+6. Testing the PATCH Endpoint
+Once you have implemented the above, you can test the PATCH endpoint using tools like Postman or cURL:
+
+Example PATCH Request (Postman):
+URL: http://localhost:8080/users/1
+Method: PATCH
+Body (JSON):
+json
+Copy code
+{
+    "phoneNo": "1234567890",
+    "panCardNo": "ABCDE1234F"
+}
+Example PATCH Request (cURL):
+bash
+Copy code
+curl -X PATCH http://localhost:8080/users/1 \
+  -H "Content-Type: application/json" \
+  -d '{"phoneNo": "1234567890", "panCardNo": "ABCDE1234F"}'
+7. Conclusion
+This setup ensures:
+
+You only update the phoneNo and panCardNo of the user without touching other fields.
+The UserEntity is updated correctly via a service layer.
+The controller exposes the endpoint for PATCH requests to update user details.
+By using this approach, you maintain a clean separation of concerns between the controller, service, and DAO layers while allowing partial updates of user data. This method works well even when the UserEntity is related to other entities like CredsEntity and RolesEntity.
+
+
+
 
 
 Yes, the Role and Cred tables should also have corresponding POJO classes and DAO interfaces with implementations if they are part of your system. Here’s how you can include them:
