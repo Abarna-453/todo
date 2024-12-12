@@ -1,3 +1,32 @@
+@Service
+public class UserInfoDetailsServiceImpl implements UserDetailsService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+
+        // Get single role
+        Role userRole = user.getRole();
+        if (userRole == null) {
+            throw new IllegalStateException("User has no role assigned.");
+        }
+
+        // Convert role to GrantedAuthority
+        GrantedAuthority authority = new SimpleGrantedAuthority(userRole.getName());
+
+        return new User(user.getUsername(), user.getPassword(), user.isActive(),
+                true, true, true, List.of(authority));
+    }
+}
+
+
+
+
+
 Creating a frontend for the tax management application using Angular requires structuring the project to effectively manage the complexity and data interaction with your Spring Boot backend and Oracle database. Here's a detailed plan and implementation strategy for the Angular frontend:
 
 Folder Structure
