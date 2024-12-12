@@ -18,6 +18,45 @@ public class UserInfoUserDetailsServiceImpl implements UserDetailsService {
     UserInfoDao userInfoDao;
 
     @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        Optional<UserInfoEntity> userInfoEntity = userInfoDao.findByCreds_Email(email);  // Assuming you have findByCreds_Email method
+
+        return userInfoEntity
+                .map(userInfo -> {
+                    // Extract role from the user's RoleEntity
+                    String userRole = userInfo.getRole().getRoleName();  // Assuming getRole returns a RoleEntity
+                   
+                    // Returning UserDetails with the single role
+                    return new UserDetailsServiceImpl(userInfo.getCreds().getEmail(), userInfo.getCreds().getPassword(), userRole);
+                })
+                .orElseThrow(() -> new UsernameNotFoundException(email + " not found"));
+    }
+}
+
+
+
+
+
+package com.bms.bms_spring_boot_rest_data_project.config;
+
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+import com.bms.bms_spring_boot_rest_data_project.dao.UserInfoDao;
+import com.bms.bms_spring_boot_rest_data_project.dao.entity.UserInfoEntity;
+
+@Service
+public class UserInfoUserDetailsServiceImpl implements UserDetailsService {
+
+    @Autowired
+    UserInfoDao userInfoDao;
+
+    @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Optional<UserInfoEntity> userInfoEntity = userInfoDao.findByName(username);
 
