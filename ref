@@ -1,3 +1,538 @@
+Frontend: Angular
+Setup
+
+Install Angular Material:
+
+bash
+Copy code
+ng add @angular/material
+Install JWT Library:
+
+bash
+Copy code
+npm install @auth0/angular-jwt
+Folder Structure
+lua
+Copy code
+src/
+|-- app/
+    |-- auth/            # Login & Signup components
+    |-- dashboard/       # AnnualTaxFilingDetails CRUD components
+    |-- shared/          # Shared services, guards, and interceptors
+1. App Module
+typescript
+Copy code
+// app.module.ts
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { ReactiveFormsModule } from '@angular/forms';
+import { AppRoutingModule } from './app-routing.module';
+import { AppComponent } from './app.component';
+import { AuthInterceptor } from './shared/auth.interceptor';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatButtonModule } from '@angular/material/button';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    // Add component declarations here
+  ],
+  imports: [
+    BrowserModule,
+    AppRoutingModule,
+    HttpClientModule,
+    ReactiveFormsModule,
+    BrowserAnimationsModule,
+    MatToolbarModule,
+    MatButtonModule,
+    // Include Material UI modules
+  ],
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }
+  ],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }
+2. Auth Module
+Login Component
+typescript
+Copy code
+// auth/login.component.ts
+import { Component } from '@angular/core';
+import { FormBuilder, FormGroup } from '@angular/forms';
+import { AuthService } from '../shared/auth.service';
+
+@Component({
+  selector: 'app-login',
+  template: `
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      <mat-form-field>
+        <input matInput formControlName="email" placeholder="Email" />
+      </mat-form-field>
+      <mat-form-field>
+        <input matInput formControlName="password" placeholder="Password" type="password" />
+      </mat-form-field>
+      <button mat-raised-button color="primary">Login</button>
+    </form>
+  `,
+  styles: []
+})
+export class LoginComponent {
+  loginForm: FormGroup;
+  
+  constructor(private fb: FormBuilder, private authService: AuthService) {
+    this.loginForm = this.fb.group({
+      email: [''],
+      password: ['']
+    });
+  }
+
+  onSubmit() {
+    this.authService.login(this.loginForm.value).subscribe();
+  }
+}
+Auth Service
+typescript
+Copy code
+// shared/auth.service.ts
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthService {
+  private apiUrl = 'http://localhost:8080/api/auth';
+
+  constructor(private http: HttpClient) {}
+
+  login(credentials: { email: string, password: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/login`, credentials);
+  }
+}
+3. Dashboard (AnnualTaxFilingDetails CRUD)
+CRUD Component
+typescript
+Copy code
+// dashboard/annual-tax-filing.component.ts
+import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup } from '@angular/forms';
+import { AnnualService } from '../shared/annual.service';
+
+@Component({
+  selector: 'app-annual-tax-filing',
+  template: `
+    <form [formGroup]="filingForm" (ngSubmit)="submitFiling()">
+      <mat-form-field>
+        <input matInput formControlName="total_deduction" placeholder="Total Deduction" />
+      </mat-form-field>
+      <mat-form-field>
+        <input matInput formControlName="total_claims" placeholder="Total Claims" />
+      </mat-form-field>
+      <mat-form-field>
+        <input matInput formControlName="total_returns" placeholder="Total Returns" />
+      </mat-form-field>
+      <button mat-raised-button color="primary">Submit</button>
+    </form>
+  `,
+  styles: []
+})
+export class AnnualTaxFilingComponent implements OnInit {
+  filingForm: FormGroup;
+
+  constructor(private fb: FormBuilder, private annualService: AnnualService) {}
+
+  ngOnInit() {
+    this.filingForm = this.fb.group({
+      total_deduction: [''],
+      total_claims: [''],
+      total_returns: [''],
+    });
+  }
+
+  submitFiling() {
+    this.annualService.addFiling(this.filingForm.value).subscribe();
+  }
+}
+Service for CRUD Operations
+typescript
+Copy code
+// shared/annual.service.ts
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AnnualService {
+  private apiUrl = 'http://localhost:8080/api/annual';
+
+  constructor(private http: HttpClient) {}
+
+  addFiling(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/add`, data);
+  }
+}
+4. Routes
+typescript
+Copy code
+// app-routing.module.ts
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { LoginComponent } from './auth/login.component';
+import { AnnualTaxFilingComponent } from './dashboard/annual-tax-filing.component';
+
+const routes: Routes = [
+  { path: 'login', component: LoginComponent },
+  { path: 'dashboard', component: AnnualTaxFilingComponent },
+  { path: '', redirectTo: '/login', pathMatch: 'full' }
+];
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule]
+})
+export class AppRoutingModule { }
+Backend: Spring Boot
+Create Tables as per schema using JPA entities.
+Add a JWT utility for token management.
+Entity Example
+java
+Copy code
+@Entity
+public class AnnualTaxFilingDetails {
+    @Id
+    private String annualfilingId;
+    private Long totalDeduction;
+    private Long totalClaims;
+    private Long totalReturns;
+    private LocalDate filingDate;
+    private String description;
+    private Year year;
+
+    // Getters and Setters
+}
+Controller Example
+java
+Copy code
+@RestController
+@RequestMapping("/api/annual")
+public class AnnualTaxFilingController {
+
+    @Autowired
+    private AnnualTaxFilingService annualService;
+
+    @PostMapping("/add")
+    public ResponseEntity<String> addFiling(@RequestBody AnnualTaxFilingDetails filing) {
+        annualService.saveFiling(filing);
+        return ResponseEntity.ok("Filing added successfully!");
+    }
+}
+This is a comprehensive outline. Let me know if you need more details!
+
+
+
+
+
+You said:
+Give full files structure & codes for all 
+
+2/2
+
+ChatGPT said:
+ChatGPT
+Below is the full structure and code for your Angular + Material frontend and Spring Boot backend application. It includes all required files, routes, components, and APIs.
+
+Frontend (Angular)
+Folder Structure
+lua
+Copy code
+src/
+|-- app/
+    |-- auth/
+        |-- login/
+            |-- login.component.html
+            |-- login.component.ts
+        |-- signup/
+            |-- signup.component.html
+            |-- signup.component.ts
+    |-- dashboard/
+        |-- annual-tax-filing/
+            |-- annual-tax-filing.component.html
+            |-- annual-tax-filing.component.ts
+    |-- shared/
+        |-- services/
+            |-- auth.service.ts
+            |-- annual.service.ts
+        |-- interceptors/
+            |-- auth.interceptor.ts
+    |-- app.module.ts
+    |-- app-routing.module.ts
+    |-- app.component.html
+    |-- app.component.ts
+1. app.module.ts
+typescript
+Copy code
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { AppRoutingModule } from './app-routing.module';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { ReactiveFormsModule } from '@angular/forms';
+import { AppComponent } from './app.component';
+import { LoginComponent } from './auth/login/login.component';
+import { SignupComponent } from './auth/signup/signup.component';
+import { AnnualTaxFilingComponent } from './dashboard/annual-tax-filing/annual-tax-filing.component';
+import { AuthInterceptor } from './shared/interceptors/auth.interceptor';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    LoginComponent,
+    SignupComponent,
+    AnnualTaxFilingComponent
+  ],
+  imports: [
+    BrowserModule,
+    AppRoutingModule,
+    HttpClientModule,
+    BrowserAnimationsModule,
+    ReactiveFormsModule,
+    MatToolbarModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule
+  ],
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }
+  ],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }
+2. app-routing.module.ts
+typescript
+Copy code
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { LoginComponent } from './auth/login/login.component';
+import { SignupComponent } from './auth/signup/signup.component';
+import { AnnualTaxFilingComponent } from './dashboard/annual-tax-filing/annual-tax-filing.component';
+
+const routes: Routes = [
+  { path: 'login', component: LoginComponent },
+  { path: 'signup', component: SignupComponent },
+  { path: 'annual-filing', component: AnnualTaxFilingComponent },
+  { path: '', redirectTo: 'login', pathMatch: 'full' }
+];
+
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule]
+})
+export class AppRoutingModule { }
+3. Auth Components
+Login Component
+login.component.html
+html
+Copy code
+<form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+  <mat-form-field>
+    <input matInput placeholder="Email" formControlName="email" />
+  </mat-form-field>
+  <mat-form-field>
+    <input matInput placeholder="Password" type="password" formControlName="password" />
+  </mat-form-field>
+  <button mat-raised-button color="primary">Login</button>
+</form>
+login.component.ts
+typescript
+Copy code
+import { Component } from '@angular/core';
+import { FormBuilder, FormGroup } from '@angular/forms';
+import { AuthService } from '../../shared/services/auth.service';
+
+@Component({
+  selector: 'app-login',
+  templateUrl: './login.component.html',
+  styleUrls: ['./login.component.css']
+})
+export class LoginComponent {
+  loginForm: FormGroup;
+
+  constructor(private fb: FormBuilder, private authService: AuthService) {
+    this.loginForm = this.fb.group({
+      email: [''],
+      password: ['']
+    });
+  }
+
+  onSubmit() {
+    this.authService.login(this.loginForm.value).subscribe(response => {
+      console.log('Logged in successfully!', response);
+    });
+  }
+}
+Signup Component
+signup.component.html
+html
+Copy code
+<form [formGroup]="signupForm" (ngSubmit)="onSubmit()">
+  <mat-form-field>
+    <input matInput placeholder="Name" formControlName="name" />
+  </mat-form-field>
+  <mat-form-field>
+    <input matInput placeholder="Email" formControlName="email" />
+  </mat-form-field>
+  <mat-form-field>
+    <input matInput placeholder="Password" type="password" formControlName="password" />
+  </mat-form-field>
+  <mat-form-field>
+    <input matInput placeholder="Phone Number" formControlName="phone_no" />
+  </mat-form-field>
+  <button mat-raised-button color="primary">Signup</button>
+</form>
+signup.component.ts
+typescript
+Copy code
+import { Component } from '@angular/core';
+import { FormBuilder, FormGroup } from '@angular/forms';
+import { AuthService } from '../../shared/services/auth.service';
+
+@Component({
+  selector: 'app-signup',
+  templateUrl: './signup.component.html',
+  styleUrls: ['./signup.component.css']
+})
+export class SignupComponent {
+  signupForm: FormGroup;
+
+  constructor(private fb: FormBuilder, private authService: AuthService) {
+    this.signupForm = this.fb.group({
+      name: [''],
+      email: [''],
+      password: [''],
+      phone_no: ['']
+    });
+  }
+
+  onSubmit() {
+    this.authService.signup(this.signupForm.value).subscribe(response => {
+      console.log('Signed up successfully!', response);
+    });
+  }
+}
+4. Dashboard Component
+AnnualTaxFiling Component
+annual-tax-filing.component.html
+html
+Copy code
+<form [formGroup]="filingForm" (ngSubmit)="onSubmit()">
+  <mat-form-field>
+    <input matInput placeholder="Total Deduction" formControlName="total_deduction" />
+  </mat-form-field>
+  <mat-form-field>
+    <input matInput placeholder="Total Claims" formControlName="total_claims" />
+  </mat-form-field>
+  <mat-form-field>
+    <input matInput placeholder="Total Returns" formControlName="total_returns" />
+  </mat-form-field>
+  <button mat-raised-button color="primary">Submit Filing</button>
+</form>
+annual-tax-filing.component.ts
+typescript
+Copy code
+import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup } from '@angular/forms';
+import { AnnualService } from '../../shared/services/annual.service';
+
+@Component({
+  selector: 'app-annual-tax-filing',
+  templateUrl: './annual-tax-filing.component.html',
+  styleUrls: ['./annual-tax-filing.component.css']
+})
+export class AnnualTaxFilingComponent implements OnInit {
+  filingForm: FormGroup;
+
+  constructor(private fb: FormBuilder, private annualService: AnnualService) {
+    this.filingForm = this.fb.group({
+      total_deduction: [''],
+      total_claims: [''],
+      total_returns: ['']
+    });
+  }
+
+  ngOnInit(): void {}
+
+  onSubmit() {
+    this.annualService.addFiling(this.filingForm.value).subscribe(response => {
+      console.log('Filing submitted successfully!', response);
+    });
+  }
+}
+Shared Services
+Auth Service
+typescript
+Copy code
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthService {
+  private apiUrl = 'http://localhost:8080/api/auth';
+
+  constructor(private http: HttpClient) {}
+
+  login(credentials: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/login`, credentials);
+  }
+
+  signup(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/signup`, data);
+  }
+}
+Annual Service
+typescript
+Copy code
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AnnualService {
+  private apiUrl = 'http://localhost:8080/api/annual';
+
+  constructor(private http: HttpClient) {}
+
+  addFiling(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/add`, data);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 View Page (viewproduct.html):
 
 html
