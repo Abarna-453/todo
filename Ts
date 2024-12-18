@@ -1,3 +1,57 @@
+@Override
+public EmployeePojo patchUpdateEmployee(String empId, Map<String, Object> updates) {
+    Optional<EmployeeEntity> empEntityOpt = empDao.findById(empId);
+    if (empEntityOpt.isPresent()) {
+        EmployeeEntity empEntity = empEntityOpt.get();
+        
+        // Update fields selectively
+        updates.forEach((key, value) -> {
+            switch (key) {
+                case "additionalAllowances":
+                    empEntity.setAdditionalAllowances(Long.parseLong(value.toString()));
+                    break;
+                case "bonus":
+                    empEntity.setBonus(Long.parseLong(value.toString()));
+                    break;
+                case "healthInsurance":
+                    empEntity.setHealthInsurance(Long.parseLong(value.toString()));
+                    break;
+                case "investPojo":
+                    InvestmentDetailsPojo investPojo = objectMapper.convertValue(value, InvestmentDetailsPojo.class);
+                    empEntity.setInvestEntity(investPojo);
+                    break;
+            }
+        });
+
+        // Save the entity
+        empDao.saveAndFlush(empEntity);
+        
+        // Convert entity back to POJO
+        EmployeePojo empPojo = new EmployeePojo();
+        BeanUtils.copyProperties(empEntity, empPojo);
+        return empPojo;
+    }
+    return null;
+}
+
+
+@PatchMapping("/employees/{empId}")
+public ResponseEntity<EmployeePojo> patchEmployee(
+        @PathVariable String empId,
+        @RequestBody Map<String, Object> updates) {
+    
+    EmployeePojo updatedEmployee = employeeService.patchUpdateEmployee(empId, updates);
+    if (updatedEmployee != null) {
+        return ResponseEntity.ok(updatedEmployee);
+    }
+    return ResponseEntity.notFound().build();
+}
+
+
+
+
+
+
 -- Data for CDSL
 BEGIN
     FOR i IN 1..30 LOOP
